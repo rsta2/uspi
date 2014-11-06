@@ -18,7 +18,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include <uspi/dwhciregister.h>
-#include <uspi.h>
+#include <uspios.h>
 #include <uspi/assert.h>
 
 void DWHCIRegister (TDWHCIRegister *pThis, u32 nAddress)
@@ -130,13 +130,13 @@ void DWHCIRegisterDump (TDWHCIRegister *pThis)
 	assert (pThis != 0);
 	if (pThis->m_bValid)
 	{
-		LoggerWrite ("dwhci", LOG_DEBUG,
+		LogWrite ("dwhci", LOG_DEBUG,
 			     "Register at 0x%X is 0x%X",
 			     pThis->m_nAddress & 0xFFF, pThis->m_nBuffer);
 	}
 	else
 	{
-		LoggerWrite ("dwhci", LOG_DEBUG,
+		LogWrite ("dwhci", LOG_DEBUG,
 			     "Register at 0x%X was not set",
 			     pThis->m_nAddress & 0xFFF);
 	}

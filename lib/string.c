@@ -18,7 +18,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include <uspi/string.h>
-#include <uspi.h>
+#include <uspios.h>
 #include <uspi/util.h>
 #include <uspi/assert.h>
 

@@ -1,7 +1,5 @@
 //
-// uspi.h
-//
-// Services provided by the USPi library
+// devicenameservice.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -19,28 +17,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspi_h
-#define _uspi_h
+#ifndef _uspi_devicenameservice_h
+#define _uspi_devicenameservice_h
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <uspi/types.h>
 
-int USPiInitialize (void);
-
-// Ethernet services
-int USPiEthernetAvailable (void);
-
-void USPiGetMACAddress (unsigned char Buffer[6]);
-
-int USPiSendFrame (const void *pBuffer, unsigned nLength);
-
-// pBuffer must have size FRAME_BUFFER_SIZE
-#define FRAME_BUFFER_SIZE	2048
-int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength);
-
-#ifdef __cplusplus
+typedef struct TDeviceInfo
+{
+	struct TDeviceInfo	*pNext;
+	char			*pName;
+	void			*pDevice;
+	boolean			 bBlockDevice;
 }
-#endif
+TDeviceInfo;
+
+typedef struct TDeviceNameService
+{
+	TDeviceInfo *m_pList;
+}
+TDeviceNameService;
+
+void DeviceNameService (TDeviceNameService *pThis);
+void _DeviceNameService (TDeviceNameService *pThis);
+
+void DeviceNameServiceAddDevice (TDeviceNameService *pThis, const char *pName, void *pDevice, boolean bBlockDevice);
+
+void *DeviceNameServiceGetDevice (TDeviceNameService *pThis, const char *pName, boolean bBlockDevice);
+
+TDeviceNameService *DeviceNameServiceGet (void);
 
 #endif

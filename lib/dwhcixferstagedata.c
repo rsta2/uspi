@@ -19,7 +19,7 @@
 //
 #include <uspi/dwhcixferstagedata.h>
 #include <uspi/dwhci.h>
-#include <uspi.h>
+#include <uspios.h>
 #include <uspi/assert.h>
 
 #ifdef SPLIT_SUPPORT				// will come in one of the next steps

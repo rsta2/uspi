@@ -1,7 +1,5 @@
 //
-// uspi.h
-//
-// Services provided by the USPi library
+// usbstandardhub.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -19,25 +17,38 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspi_h
-#define _uspi_h
+#ifndef _usbstandardhub_h
+#define _usbstandardhub_h
+
+#include <uspi/usb.h>
+#include <uspi/usbhub.h>
+#include <uspi/usbdevice.h>
+#include <uspi/usbhostcontroller.h>
+#include <uspi/string.h>
+#include <uspi/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int USPiInitialize (void);
+typedef struct TUSBStandardHub
+{
+	TUSBDevice m_USBDevice;
 
-// Ethernet services
-int USPiEthernetAvailable (void);
+	TUSBHubDescriptor *m_pHubDesc;
 
-void USPiGetMACAddress (unsigned char Buffer[6]);
+	unsigned m_nPorts;
+	TUSBDevice *m_pDevice[USB_HUB_MAX_PORTS];
+	TUSBPortStatus *m_pStatus[USB_HUB_MAX_PORTS];
+}
+TUSBStandardHub;
 
-int USPiSendFrame (const void *pBuffer, unsigned nLength);
+void USBStandardHub (TUSBStandardHub *pThis, TUSBHostController *pHost, TUSBSpeed Speed);
+void USBStandardHub2 (TUSBStandardHub *pThis, TUSBDevice *pDevice);
+void _USBStandardHub (TUSBStandardHub *pThis);
 
-// pBuffer must have size FRAME_BUFFER_SIZE
-#define FRAME_BUFFER_SIZE	2048
-int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength);
+boolean USBStandardHubInitialize (TUSBStandardHub *pThis);
+boolean USBStandardHubConfigure (TUSBStandardHub *pThis);
 
 #ifdef __cplusplus
 }

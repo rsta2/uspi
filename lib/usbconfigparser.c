@@ -18,7 +18,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include <uspi/usbconfigparser.h>
-#include <uspi.h>
+#include <uspios.h>
 #include <uspi/assert.h>
 
 #define SKIP_BYTES(pDesc, nBytes)	((TUSBDescriptor *) ((u8 *) (pDesc) + (nBytes)))
@@ -178,7 +178,7 @@ void USBConfigurationParserError (TUSBConfigurationParser *pThis, const char *pS
 {
 	assert (pThis != 0);
 	assert (pSource != 0);
-	LoggerWrite (pSource, LOG_ERROR,
+	LogWrite (pSource, LOG_ERROR,
 		     "Invalid configuration descriptor (offset 0x%X)",
 		     (unsigned) pThis->m_pErrorPosition - (unsigned) pThis->m_pBuffer);
 #ifndef NDEBUG

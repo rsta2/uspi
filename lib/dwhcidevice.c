@@ -24,7 +24,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include <uspi/dwhcidevice.h>
-#include <uspi.h>
+#include <uspios.h>
 #include <uspi/bcm2835.h>
 #include <uspi/synchronize.h>
 #include <uspi/sysconfig.h>
@@ -116,7 +116,7 @@ boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
 	// Check for model A to prevent non-high-speed devices from over-clocking
 	if (IsModelA ())
 	{
-		LoggerWrite (FromDWHCI, LOG_ERROR, "Model A is not supported");
+		LogWrite (FromDWHCI, LOG_ERROR, "Model A is not supported");
 		return FALSE;
 	}
 
@@ -126,14 +126,14 @@ boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
 	DWHCIRegister (&VendorId, DWHCI_CORE_VENDOR_ID);
 	if (DWHCIRegisterRead (&VendorId) != 0x4F54280A)
 	{
-		LoggerWrite (FromDWHCI, LOG_ERROR, "Unknown vendor 0x%0X", DWHCIRegisterGet (&VendorId));
+		LogWrite (FromDWHCI, LOG_ERROR, "Unknown vendor 0x%0X", DWHCIRegisterGet (&VendorId));
 		_DWHCIRegister (&VendorId);
 		return FALSE;
 	}
 
 	if (!SetPowerStateOn (DEVICE_ID_USB_HCD))
 	{
-		LoggerWrite (FromDWHCI, LOG_ERROR, "Cannot power on");
+		LogWrite (FromDWHCI, LOG_ERROR, "Cannot power on");
 		_DWHCIRegister (&VendorId);
 		return FALSE;
 	}
@@ -149,7 +149,7 @@ boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
 
 	if (!DWHCIDeviceInitCore (pThis))
 	{
-		LoggerWrite (FromDWHCI, LOG_ERROR, "Cannot initialize core");
+		LogWrite (FromDWHCI, LOG_ERROR, "Cannot initialize core");
 		_DWHCIRegister (&AHBConfig);
 		_DWHCIRegister (&VendorId);
 		return FALSE;
@@ -159,7 +159,7 @@ boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
 	
 	if (!DWHCIDeviceInitHost (pThis))
 	{
-		LoggerWrite (FromDWHCI, LOG_ERROR, "Cannot initialize host");
+		LogWrite (FromDWHCI, LOG_ERROR, "Cannot initialize host");
 		_DWHCIRegister (&AHBConfig);
 		_DWHCIRegister (&VendorId);
 		return FALSE;
@@ -167,7 +167,7 @@ boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
 
 	if (!DWHCIDeviceEnableRootPort (pThis))
 	{
-		LoggerWrite (FromDWHCI, LOG_ERROR, "Cannot enable root port");
+		LogWrite (FromDWHCI, LOG_ERROR, "Cannot enable root port");
 		_DWHCIRegister (&AHBConfig);
 		_DWHCIRegister (&VendorId);
 		return FALSE;
@@ -362,7 +362,7 @@ boolean DWHCIDeviceInitCore (TDWHCIDevice *pThis)
 
 	if (!DWHCIDeviceReset (pThis))
 	{
-		LoggerWrite (FromDWHCI, LOG_ERROR, "Reset failed");
+		LogWrite (FromDWHCI, LOG_ERROR, "Reset failed");
 		return FALSE;
 	}
 
@@ -497,7 +497,7 @@ boolean DWHCIDeviceEnableRootPort (TDWHCIDevice *pThis)
 		DWHCIRegisterAnd (&HostPort, ~DWHCI_HOST_PORT_POWER);
 		DWHCIRegisterWrite (&HostPort);
 
-		LoggerWrite (FromDWHCI, LOG_ERROR, "Device at root port is not high-speed");
+		LogWrite (FromDWHCI, LOG_ERROR, "Device at root port is not high-speed");
 
 		_DWHCIRegister (&HostPort);
 
@@ -971,7 +971,7 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 		nStatus = DWHCITransferStageDataGetTransactionStatus (pStageData);
 		if (nStatus & DWHCI_HOST_CHAN_INT_ERROR_MASK)
 		{
-			LoggerWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
+			LogWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
 		}
 		else
 		{
@@ -998,7 +998,7 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 		    || (nStatus & DWHCI_HOST_CHAN_INT_NAK)
 		    || (nStatus & DWHCI_HOST_CHAN_INT_NYET))
 		{
-			LoggerWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
+			LogWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
 
 			DWHCIDeviceDisableChannelInterrupt (pThis, nChannel);
 
@@ -1029,7 +1029,7 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 		nStatus = DWHCITransferStageDataGetTransactionStatus (pStageData);
 		if (nStatus & DWHCI_HOST_CHAN_INT_ERROR_MASK)
 		{
-			LoggerWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
+			LogWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
 
 			DWHCIDeviceDisableChannelInterrupt (pThis, nChannel);
 
@@ -1252,7 +1252,7 @@ boolean DWHCIDeviceWaitForBit (TDWHCIDevice *pThis, TDWHCIRegister *pRegister, u
 
 		if (--nMsTimeout == 0)
 		{
-			LoggerWrite (FromDWHCI, LOG_WARNING, "Timeout");
+			LogWrite (FromDWHCI, LOG_WARNING, "Timeout");
 #ifndef NDEBUG
 			DWHCIRegisterDump (pRegister);
 #endif
@@ -1274,7 +1274,7 @@ void DWHCIDeviceDumpRegister (TDWHCIDevice *pThis, const char *pName, u32 nAddre
 
 	DataMemBarrier ();
 
-	LoggerWrite (FromDWHCI, LOG_DEBUG, "0x%08X %s", DWHCIRegisterRead (&Register), pName);
+	LogWrite (FromDWHCI, LOG_DEBUG, "0x%08X %s", DWHCIRegisterRead (&Register), pName);
 
 	_DWHCIRegister (&Register);
 }

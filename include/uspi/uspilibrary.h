@@ -1,7 +1,5 @@
 //
-// uspi.h
-//
-// Services provided by the USPi library
+// uspilibrary.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -19,25 +17,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspi_h
-#define _uspi_h
+#ifndef _uspi_uspilibrary_h
+#define _uspi_uspilibrary_h
+
+#include <uspi/devicenameservice.h>
+#include <uspi/dwhcidevice.h>
+#include <uspi/usbstandardhub.h>
+#include <uspi/smsc951x.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int USPiInitialize (void);
-
-// Ethernet services
-int USPiEthernetAvailable (void);
-
-void USPiGetMACAddress (unsigned char Buffer[6]);
-
-int USPiSendFrame (const void *pBuffer, unsigned nLength);
-
-// pBuffer must have size FRAME_BUFFER_SIZE
-#define FRAME_BUFFER_SIZE	2048
-int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength);
+typedef struct TUSPiLibrary
+{
+	TDeviceNameService	 NameService;
+	TDWHCIDevice		 DWHCI;
+	TUSBStandardHub		 USBHub1;
+	TSMSC951xDevice		*pEth0;
+}
+TUSPiLibrary;
 
 #ifdef __cplusplus
 }

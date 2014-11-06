@@ -18,9 +18,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-OBJS	= dwhcidevice.o dwhciregister.o dwhcixferstagedata.o \
-	  usbconfigparser.o usbdevice.o usbendpoint.o usbrequest.o \
-	  string.o util.o
+OBJS	= uspilibrary.o \
+	  dwhcidevice.o dwhciregister.o dwhcixferstagedata.o \
+	  usbconfigparser.o usbdevice.o usbdevicefactory.o usbendpoint.o usbrequest.o usbstandardhub.o \
+	  devicenameservice.o macaddress.o smsc951x.o string.o util.o
 
 libuspi.a: $(OBJS)
 	rm -f libuspi.a

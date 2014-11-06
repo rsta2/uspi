@@ -43,6 +43,8 @@ struct TUSBEndpoint;
 
 typedef struct TUSBDevice
 {
+	boolean (*Configure) (struct TUSBDevice *pThis);
+
 	struct TDWHCIDevice *m_pHost;
 
 	u8		    m_ucAddress;

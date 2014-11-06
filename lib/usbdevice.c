@@ -20,7 +20,7 @@
 #include <uspi/usbdevice.h>
 #include <uspi/dwhcidevice.h>
 #include <uspi/usbendpoint.h>
-#include <uspi.h>
+#include <uspios.h>
 #include <uspi/util.h>
 #include <uspi/assert.h>
 
@@ -42,6 +42,8 @@ static u8 s_ucNextAddress = USB_FIRST_DEDICATED_ADDRESS;
 void USBDevice (TUSBDevice *pThis, struct TDWHCIDevice *pHost, TUSBSpeed Speed, u8 ucHubAddress, u8 ucHubPortNumber)
 {
 	assert (pThis != 0);
+
+	pThis->Configure = USBDeviceConfigure;
 
 	pThis->m_pHost = pHost;
 	pThis->m_ucAddress = USB_DEFAULT_ADDRESS;
@@ -67,12 +69,14 @@ void USBDeviceCopy (TUSBDevice *pThis, TUSBDevice *pDevice)
 {
 	assert (pThis != 0);
 
+	assert (pDevice != 0);
+
+	pThis->Configure = pDevice->Configure;
+
 	pThis->m_pEndpoint0 = 0;
 	pThis->m_pDeviceDesc = 0;
 	pThis->m_pConfigDesc = 0;
 	pThis->m_pConfigParser = 0;
-
-	assert (pDevice != 0);
 
 	pThis->m_pHost		 = pDevice->m_pHost;
 	pThis->m_ucAddress	 = pDevice->m_ucAddress;
@@ -140,6 +144,8 @@ void _USBDevice (TUSBDevice *pThis)
 		free (pThis->m_pEndpoint0);
 		pThis->m_pEndpoint0 = 0;
 	}
+
+	pThis->Configure = 0;
 	
 	pThis->m_pHost = 0;
 }
@@ -161,7 +167,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 				    pThis->m_pDeviceDesc, USB_DEFAULT_MAX_PACKET_SIZE, REQUEST_IN)
 	    != USB_DEFAULT_MAX_PACKET_SIZE)
 	{
-		LoggerWrite (FromDevice, LOG_ERROR, "Cannot get device descriptor (short)");
+		LogWrite (FromDevice, LOG_ERROR, "Cannot get device descriptor (short)");
 
 		free (pThis->m_pDeviceDesc);
 		pThis->m_pDeviceDesc = 0;
@@ -172,7 +178,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 	if (   pThis->m_pDeviceDesc->bLength	     != sizeof *pThis->m_pDeviceDesc
 	    || pThis->m_pDeviceDesc->bDescriptorType != DESCRIPTOR_DEVICE)
 	{
-		LoggerWrite (FromDevice, LOG_ERROR, "Invalid device descriptor");
+		LogWrite (FromDevice, LOG_ERROR, "Invalid device descriptor");
 
 		free (pThis->m_pDeviceDesc);
 		pThis->m_pDeviceDesc = 0;
@@ -187,7 +193,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 				    pThis->m_pDeviceDesc, sizeof *pThis->m_pDeviceDesc, REQUEST_IN)
 	    != (int) sizeof *pThis->m_pDeviceDesc)
 	{
-		LoggerWrite (FromDevice, LOG_ERROR, "Cannot get device descriptor");
+		LogWrite (FromDevice, LOG_ERROR, "Cannot get device descriptor");
 
 		free (pThis->m_pDeviceDesc);
 		pThis->m_pDeviceDesc = 0;
@@ -202,14 +208,14 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 	u8 ucAddress = s_ucNextAddress++;
 	if (ucAddress > USB_MAX_ADDRESS)
 	{
-		LoggerWrite (FromDevice, LOG_ERROR, "Too many devices");
+		LogWrite (FromDevice, LOG_ERROR, "Too many devices");
 
 		return FALSE;
 	}
 
 	if (!DWHCIDeviceSetAddress (pThis->m_pHost, pThis->m_pEndpoint0, ucAddress))
 	{
-		LoggerWrite (FromDevice, LOG_ERROR,
+		LogWrite (FromDevice, LOG_ERROR,
 			     "Cannot set address %u", (unsigned) ucAddress);
 
 		return FALSE;
@@ -226,7 +232,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 				    pThis->m_pConfigDesc, sizeof *pThis->m_pConfigDesc, REQUEST_IN)
 	    != (int) sizeof *pThis->m_pConfigDesc)
 	{
-		LoggerWrite (FromDevice, LOG_ERROR, "Cannot get configuration descriptor (short)");
+		LogWrite (FromDevice, LOG_ERROR, "Cannot get configuration descriptor (short)");
 
 		free (pThis->m_pConfigDesc);
 		pThis->m_pConfigDesc = 0;
@@ -238,7 +244,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 	    || pThis->m_pConfigDesc->bDescriptorType != DESCRIPTOR_CONFIGURATION
 	    || pThis->m_pConfigDesc->wTotalLength    >  MAX_CONFIG_DESC_SIZE)
 	{
-		LoggerWrite (FromDevice, LOG_ERROR, "Invalid configuration descriptor");
+		LogWrite (FromDevice, LOG_ERROR, "Invalid configuration descriptor");
 		
 		free (pThis->m_pConfigDesc);
 		pThis->m_pConfigDesc = 0;
@@ -258,7 +264,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 				    pThis->m_pConfigDesc, nTotalLength, REQUEST_IN)
 	    != (int) nTotalLength)
 	{
-		LoggerWrite (FromDevice, LOG_ERROR, "Cannot get configuration descriptor");
+		LogWrite (FromDevice, LOG_ERROR, "Cannot get configuration descriptor");
 
 		free (pThis->m_pConfigDesc);
 		pThis->m_pConfigDesc = 0;
@@ -299,7 +305,7 @@ boolean USBDeviceConfigure (TUSBDevice *pThis)
 
 	if (!DWHCIDeviceSetConfiguration (pThis->m_pHost, pThis->m_pEndpoint0, pThis->m_pConfigDesc->bConfigurationValue))
 	{
-		LoggerWrite (FromDevice, LOG_ERROR, "Cannot set configuration (%u)",
+		LogWrite (FromDevice, LOG_ERROR, "Cannot set configuration (%u)",
 			     (unsigned) pThis->m_pConfigDesc->bConfigurationValue);
 
 		return FALSE;
@@ -436,5 +442,5 @@ void USBDeviceSetAddress (TUSBDevice *pThis, u8 ucAddress)
 	assert (ucAddress <= USB_MAX_ADDRESS);
 	pThis->m_ucAddress = ucAddress;
 
-	LoggerWrite (FromDevice, LOG_DEBUG, "Device address set to %u", (unsigned) pThis->m_ucAddress);
+	LogWrite (FromDevice, LOG_DEBUG, "Device address set to %u", (unsigned) pThis->m_ucAddress);
 }

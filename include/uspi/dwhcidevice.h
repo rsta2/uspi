@@ -27,7 +27,7 @@
 #include <uspi/dwhciregister.h>
 #include <uspi/dwhci.h>
 #include <uspi/types.h>
-#include <uspi.h>
+#include <uspios.h>
 
 #ifdef __cplusplus
 extern "C" {
