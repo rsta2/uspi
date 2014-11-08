@@ -23,7 +23,7 @@
 
 // for factory
 #include <uspi/usbstandardhub.h>
-//#include <uspi/usbmassdevice.h>
+#include <uspi/usbmassdevice.h>
 //#include <uspi/usbkeyboard.h>
 #include <uspi/smsc951x.h>
 
@@ -60,7 +60,6 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		USBStandardHub2 (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
-#if 0
 	else if (StringCompare (pName, "int8-6-50") == 0)
 	{
 		TUSBBulkOnlyMassStorageDevice *pDevice = (TUSBBulkOnlyMassStorageDevice *) malloc (sizeof (TUSBBulkOnlyMassStorageDevice));
@@ -68,6 +67,7 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		USBBulkOnlyMassStorageDevice (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
+#if 0
 	else if (StringCompare (pName, "int3-1-1") == 0)
 	{
 		TUSBKeyboardDevice *pDevice = (TUSBKeyboardDevice *) malloc (sizeof (TUSBKeyboardDevice));

@@ -77,11 +77,45 @@ int USPiInitialize (void)
 		return 0;
 	}
 
+	s_pLibrary->pUMSD1 = (TUSBBulkOnlyMassStorageDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "umsd1", TRUE);
+
 	s_pLibrary->pEth0 = (TSMSC951xDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "eth0", FALSE);
 
 	LogWrite (FromUSPi, LOG_DEBUG, "USPi library successfully initialized");
 
 	return 1;
+}
+
+int USPiMassStorageDeviceAvailable (void)
+{
+	assert (s_pLibrary != 0);
+	return s_pLibrary->pUMSD1 != 0;
+}
+
+int USPiMassStorageDeviceRead (unsigned long long ullOffset, void *pBuffer, unsigned nCount)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUMSD1 != 0);
+
+	if (USBBulkOnlyMassStorageDeviceSeek (s_pLibrary->pUMSD1, ullOffset) != ullOffset)
+	{
+		return -1;
+	}
+
+	return USBBulkOnlyMassStorageDeviceRead (s_pLibrary->pUMSD1, pBuffer, nCount);
+}
+
+int USPiMassStorageDeviceWrite (unsigned long long ullOffset, const void *pBuffer, unsigned nCount)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUMSD1 != 0);
+
+	if (USBBulkOnlyMassStorageDeviceSeek (s_pLibrary->pUMSD1, ullOffset) != ullOffset)
+	{
+		return -1;
+	}
+
+	return USBBulkOnlyMassStorageDeviceWrite (s_pLibrary->pUMSD1, pBuffer, nCount);
 }
 
 int USPiEthernetAvailable (void)

@@ -26,7 +26,7 @@
 #include <uspi/macaddress.h>
 #include <uspi/types.h>
 
-#define FRAME_BUFFER_SIZE	2048
+#define FRAME_BUFFER_SIZE	1600
 
 typedef struct TSMSC951xDevice
 {

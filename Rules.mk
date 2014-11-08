@@ -27,24 +27,13 @@ endif
 PREFIX	?= arm-rpi-linux-gnueabi-
 
 CC	= $(PREFIX)gcc
-CPP	= $(PREFIX)g++
-AS	= $(CC)
-LD	= $(PREFIX)ld
 AR	= $(PREFIX)ar
 
-AFLAGS	+= -I $(USPIHOME)/include
 CFLAGS	+= -march=armv6 -mtune=arm1176jzf-s -Wall -Wno-psabi -fno-builtin -nostdinc -nostdlib \
-	   -std=gnu99 -undef -D__uspi__ -I $(USPIHOME)/include -O #-DNDEBUG
-CPPFLAGS+= $(CFLAGS) -fno-exceptions -fno-rtti -std=c++0x
-
-%.o: %.S
-	$(AS) $(AFLAGS) -c -o $@ $<
+	   -std=gnu99 -undef -I $(USPIHOME)/include -O #-DNDEBUG
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-
-%.o: %.cpp
-	$(CPP) $(CPPFLAGS) -c -o $@ $<
 
 clean:
 	rm -f *.o *.a *.elf *.lst *.img *.cir *.map *~ $(EXTRACLEAN)

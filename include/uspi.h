@@ -26,17 +26,48 @@
 extern "C" {
 #endif
 
+//
+// USPi initialization
+//
+
+// returns 0 on failure
 int USPiInitialize (void);
 
+//
+// Mass storage device
+//
+
+// returns != 0 if available
+int USPiMassStorageDeviceAvailable (void);
+
+#define USPI_BLOCK_SIZE		512			// other block sizes are not supported
+
+// ullOffset and nCount must be multiple of USPI_BLOCK_SIZE
+// returns number of read bytes or < 0 on failure
+int USPiMassStorageDeviceRead (unsigned long long ullOffset, void *pBuffer, unsigned nCount);
+
+// ullOffset and nCount must be multiple of USPI_BLOCK_SIZE
+// returns number of written bytes or < 0 on failure
+int USPiMassStorageDeviceWrite (unsigned long long ullOffset, const void *pBuffer, unsigned nCount);
+
+//
 // Ethernet services
+//
+// (You should delay 2 seconds after USPiInitialize before accessing the Ethernet.)
+//
+
+// checks the controller only, not if Ethernet link is up
+// returns != 0 if available
 int USPiEthernetAvailable (void);
 
 void USPiGetMACAddress (unsigned char Buffer[6]);
 
+// returns 0 on failure
 int USPiSendFrame (const void *pBuffer, unsigned nLength);
 
-// pBuffer must have size FRAME_BUFFER_SIZE
-#define FRAME_BUFFER_SIZE	2048
+// pBuffer must have size USPI_FRAME_BUFFER_SIZE
+// returns 0 on failure
+#define USPI_FRAME_BUFFER_SIZE	1600
 int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength);
 
 #ifdef __cplusplus

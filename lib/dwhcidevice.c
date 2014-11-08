@@ -27,7 +27,6 @@
 #include <uspios.h>
 #include <uspi/bcm2835.h>
 #include <uspi/synchronize.h>
-#include <uspi/sysconfig.h>
 #include <uspi/assert.h>
 
 #define ARM_IRQ_USB		9		// for ConnectInterrupt()

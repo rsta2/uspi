@@ -23,6 +23,7 @@
 #include <uspi/devicenameservice.h>
 #include <uspi/dwhcidevice.h>
 #include <uspi/usbstandardhub.h>
+#include <uspi/usbmassdevice.h>
 #include <uspi/smsc951x.h>
 
 #ifdef __cplusplus
@@ -31,10 +32,11 @@ extern "C" {
 
 typedef struct TUSPiLibrary
 {
-	TDeviceNameService	 NameService;
-	TDWHCIDevice		 DWHCI;
-	TUSBStandardHub		 USBHub1;
-	TSMSC951xDevice		*pEth0;
+	TDeviceNameService		 NameService;
+	TDWHCIDevice			 DWHCI;
+	TUSBStandardHub			 USBHub1;
+	TUSBBulkOnlyMassStorageDevice	*pUMSD1;
+	TSMSC951xDevice			*pEth0;
 }
 TUSPiLibrary;
 

@@ -320,7 +320,7 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 		if (pThis->m_pStatus[nPort]->wPortStatus & PORT_LOW_SPEED__MASK)
 		{
 			//Speed = USBSpeedLow;
-			LogWrite (FromHub, LOG_WARNING, "Port %u: Low-speed devices are not supported at the moment");
+			LogWrite (FromHub, LOG_WARNING, "Port %u: Low-speed devices are not supported at the moment", nPort+1);
 			continue;
 		}
 		else if (pThis->m_pStatus[nPort]->wPortStatus & PORT_HIGH_SPEED__MASK)
@@ -330,7 +330,7 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 		else
 		{
 			//Speed = USBSpeedFull;
-			LogWrite (FromHub, LOG_WARNING, "Port %u: Full-speed devices are not supported at the moment");
+			LogWrite (FromHub, LOG_WARNING, "Port %u: Full-speed devices are not supported at the moment", nPort+1);
 			continue;
 		}
 

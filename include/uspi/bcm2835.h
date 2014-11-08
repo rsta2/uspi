@@ -20,7 +20,7 @@
 #ifndef _uspi_bcm2835_h
 #define _uspi_bcm2835_h
 
-#include <uspi/sysconfig.h>
+#include <uspios.h>
 
 #define ARM_IO_BASE		0x20000000
 #define GPU_IO_BASE		0x7E000000
