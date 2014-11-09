@@ -64,9 +64,9 @@ void DeviceNameServiceAddDevice (TDeviceNameService *pThis, const char *pName, v
 	assert (pInfo != 0);
 
 	assert (pName != 0);
-	pInfo->pName = (char *) malloc (uspi_strlen (pName)+1);
+	pInfo->pName = (char *) malloc (strlen (pName)+1);
 	assert (pInfo->pName != 0);
-	uspi_strcpy (pInfo->pName, pName);
+	strcpy (pInfo->pName, pName);
 
 	assert (pDevice != 0);
 	pInfo->pDevice = pDevice;
@@ -86,7 +86,7 @@ void *DeviceNameServiceGetDevice (TDeviceNameService *pThis, const char *pName, 
 	while (pInfo != 0)
 	{
 		assert (pInfo->pName != 0);
-		if (   uspi_strcmp (pName, pInfo->pName) == 0
+		if (   strcmp (pName, pInfo->pName) == 0
 		    && pInfo->bBlockDevice == bBlockDevice)
 		{
 			assert (pInfo->pDevice != 0);

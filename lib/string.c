@@ -41,11 +41,11 @@ void String2 (TString *pThis, const char *pString)
 {
 	assert (pThis != 0);
 
-	pThis->m_nSize = uspi_strlen (pString)+1;
+	pThis->m_nSize = strlen (pString)+1;
 
 	pThis->m_pBuffer = (char *) malloc (pThis->m_nSize);
 
-	uspi_strcpy (pThis->m_pBuffer, pString);
+	strcpy (pThis->m_pBuffer, pString);
 }
 
 void _String (TString *pThis)
@@ -80,11 +80,11 @@ const char *StringSet (TString *pThis, const char *pString)
 		free (pThis->m_pBuffer);
 	}
 	
-	pThis->m_nSize = uspi_strlen (pString)+1;
+	pThis->m_nSize = strlen (pString)+1;
 
 	pThis->m_pBuffer = (char *) malloc (pThis->m_nSize);
 
-	uspi_strcpy (pThis->m_pBuffer, pString);
+	strcpy (pThis->m_pBuffer, pString);
 
 	return pThis->m_pBuffer;
 }
@@ -98,7 +98,7 @@ size_t StringGetLength (TString *pThis)
 		return 0;
 	}
 	
-	return uspi_strlen (pThis->m_pBuffer);
+	return strlen (pThis->m_pBuffer);
 }
 
 void StringAppend (TString *pThis, const char *pString)
@@ -108,15 +108,15 @@ void StringAppend (TString *pThis, const char *pString)
 	pThis->m_nSize = 1;		// for terminating '\0'
 	if (pThis->m_pBuffer != 0)
 	{
-		pThis->m_nSize += uspi_strlen (pThis->m_pBuffer);
+		pThis->m_nSize += strlen (pThis->m_pBuffer);
 	}
-	pThis->m_nSize += uspi_strlen (pString);
+	pThis->m_nSize += strlen (pString);
 
 	char *pBuffer = (char *) malloc (pThis->m_nSize);
 
 	if (pThis->m_pBuffer != 0)
 	{
-		uspi_strcpy (pBuffer, pThis->m_pBuffer);
+		strcpy (pBuffer, pThis->m_pBuffer);
 		free (pThis->m_pBuffer);
 	}
 	else
@@ -124,7 +124,7 @@ void StringAppend (TString *pThis, const char *pString)
 		*pBuffer = '\0';
 	}
 
-	uspi_strcat (pBuffer, pString);
+	strcat (pBuffer, pString);
 
 	pThis->m_pBuffer = pBuffer;
 }
@@ -133,7 +133,7 @@ int StringCompare (TString *pThis, const char *pString)
 {
 	assert (pThis != 0);
 
-	return uspi_strcmp (pThis->m_pBuffer, pString);
+	return strcmp (pThis->m_pBuffer, pString);
 }
 
 int StringFind (TString *pThis, char chChar)
@@ -272,7 +272,7 @@ void StringFormatV (TString *pThis, const char *pFormat, va_list Args)
 					lArg = -lArg;
 				}
 				ntoa (NumBuf, (unsigned long) lArg, 10, FALSE);
-				nLen = uspi_strlen (NumBuf) + (bMinus ? 1 : 0);
+				nLen = strlen (NumBuf) + (bMinus ? 1 : 0);
 				if (bLeft)
 				{
 					if (bMinus)
@@ -305,7 +305,7 @@ void StringFormatV (TString *pThis, const char *pFormat, va_list Args)
 
 			case 's':
 				pArg = va_arg (Args, const char *);
-				nLen = uspi_strlen (pArg);
+				nLen = strlen (pArg);
 				if (bLeft)
 				{
 					StringPutString (pThis, pArg);
@@ -343,7 +343,7 @@ void StringFormatV (TString *pThis, const char *pFormat, va_list Args)
 					ulArg = va_arg (Args, unsigned);
 				}
 				ntoa (NumBuf, ulArg, nBase, *pFormat == 'X');
-				nLen = uspi_strlen (NumBuf);
+				nLen = strlen (NumBuf);
 				if (bLeft)
 				{
 					StringPutString (pThis, NumBuf);
@@ -395,11 +395,11 @@ void StringPutString (TString *pThis, const char *pString)
 {
 	assert (pThis != 0);
 
-	size_t nLen = uspi_strlen (pString);
+	size_t nLen = strlen (pString);
 	
 	StringReserveSpace (pThis, nLen);
 	
-	uspi_strcpy (pThis->m_pInPtr, pString);
+	strcpy (pThis->m_pInPtr, pString);
 	
 	pThis->m_pInPtr += nLen;
 }
@@ -424,7 +424,7 @@ void StringReserveSpace (TString *pThis, size_t nSpace)
 	char *pNewBuffer = (char *) malloc (nNewSize);
 		
 	*pThis->m_pInPtr = '\0';
-	uspi_strcpy (pNewBuffer, pThis->m_pBuffer);
+	strcpy (pNewBuffer, pThis->m_pBuffer);
 	
 	free (pThis->m_pBuffer);
 	

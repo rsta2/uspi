@@ -47,7 +47,7 @@ boolean MACAddressIsEqual (TMACAddress *pThis, TMACAddress *pAddress2)
 	assert (pThis != 0);
 	assert (pThis->m_bValid);
 	
-	return uspi_memcmp (pThis->m_Address, MACAddressGet (pAddress2), MAC_ADDRESS_SIZE) == 0 ? TRUE : FALSE;
+	return memcmp (pThis->m_Address, MACAddressGet (pAddress2), MAC_ADDRESS_SIZE) == 0 ? TRUE : FALSE;
 }
 
 void MACAddressSet (TMACAddress *pThis, const u8 *pAddress)
@@ -55,7 +55,7 @@ void MACAddressSet (TMACAddress *pThis, const u8 *pAddress)
 	assert (pThis != 0);
 	assert (pAddress != 0);
 
-	uspi_memcpy (pThis->m_Address, pAddress, MAC_ADDRESS_SIZE);
+	memcpy (pThis->m_Address, pAddress, MAC_ADDRESS_SIZE);
 	pThis->m_bValid = TRUE;
 }
 
@@ -63,7 +63,7 @@ void MACAddressSetBroadcast (TMACAddress *pThis)
 {
 	assert (pThis != 0);
 
-	uspi_memset (pThis->m_Address, 0xFF, MAC_ADDRESS_SIZE);
+	memset (pThis->m_Address, 0xFF, MAC_ADDRESS_SIZE);
 	pThis->m_bValid = TRUE;
 }
 
@@ -81,7 +81,7 @@ void MACAddressCopyTo (TMACAddress *pThis, u8 *pBuffer)
 	assert (pThis->m_bValid);
 	assert (pBuffer != 0);
 
-	uspi_memcpy (pBuffer, pThis->m_Address, MAC_ADDRESS_SIZE);
+	memcpy (pBuffer, pThis->m_Address, MAC_ADDRESS_SIZE);
 }
 
 boolean MACAddressIsBroadcast (TMACAddress *pThis)

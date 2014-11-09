@@ -19,6 +19,8 @@
 //
 #include <uspi/util.h>
 
+#ifdef USPI_PROVIDE_MEM_FUNCTIONS
+
 void *uspi_memset (void *pBuffer, int nValue, size_t nLength)
 {
 	char *p = (char *) pBuffer;
@@ -66,6 +68,10 @@ int uspi_memcmp (const void *pBuffer1, const void *pBuffer2, size_t nLength)
 
 	return 0;
 }
+
+#endif
+
+#ifdef USPI_PROVIDE_STR_FUNCTIONS
 
 size_t uspi_strlen (const char *pString)
 {
@@ -164,6 +170,8 @@ char *uspi_strcat (char *pDest, const char *pSrc)
 
 	return pDest;
 }
+
+#endif
 
 u16 uspi_le2be16 (u16 usValue)
 {

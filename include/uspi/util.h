@@ -20,27 +20,42 @@
 #ifndef _uspi_util_h
 #define _uspi_util_h
 
+#include <uspios.h>
 #include <uspi/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void *uspi_memset (void *pBuffer, int nValue, size_t nLength);
+#ifdef USPI_PROVIDE_MEM_FUNCTIONS
+	#define memset		uspi_memset
+	#define memcpy		uspi_memcpy
+	#define memcmp		uspi_memcmp
+#endif
 
-void *uspi_memcpy (void *pDest, const void *pSrc, size_t nLength);
+#ifdef USPI_PROVIDE_STR_FUNCTIONS
+	#define strlen		uspi_strlen
+	#define strcmp		uspi_strcmp
+	#define strcpy		uspi_strcpy
+	#define strncpy		uspi_strncpy
+	#define strcat		uspi_strcat
+#endif
 
-int uspi_memcmp (const void *pBuffer1, const void *pBuffer2, size_t nLength);
+void *memset (void *pBuffer, int nValue, size_t nLength);
 
-size_t uspi_strlen (const char *pString);
+void *memcpy (void *pDest, const void *pSrc, size_t nLength);
 
-int uspi_strcmp (const char *pString1, const char *pString2);
+int memcmp (const void *pBuffer1, const void *pBuffer2, size_t nLength);
 
-char *uspi_strcpy (char *pDest, const char *pSrc);
+size_t strlen (const char *pString);
 
-char *uspi_strncpy (char *pDest, const char *pSrc, size_t nMaxLen);
+int strcmp (const char *pString1, const char *pString2);
 
-char *uspi_strcat (char *pDest, const char *pSrc);
+char *strcpy (char *pDest, const char *pSrc);
+
+char *strncpy (char *pDest, const char *pSrc, size_t nMaxLen);
+
+char *strcat (char *pDest, const char *pSrc);
 
 u16 uspi_le2be16 (u16 usValue);
 

@@ -93,7 +93,7 @@ void USBDeviceCopy (TUSBDevice *pThis, TUSBDevice *pDevice)
 		pThis->m_pDeviceDesc = (TUSBDeviceDescriptor *) malloc (sizeof (TUSBDeviceDescriptor));
 		assert (pThis->m_pDeviceDesc != 0);
 
-		uspi_memcpy (pThis->m_pDeviceDesc, pDevice->m_pDeviceDesc, sizeof (TUSBDeviceDescriptor));
+		memcpy (pThis->m_pDeviceDesc, pDevice->m_pDeviceDesc, sizeof (TUSBDeviceDescriptor));
 	}
 
 	if (pDevice->m_pConfigDesc != 0)
@@ -104,7 +104,7 @@ void USBDeviceCopy (TUSBDevice *pThis, TUSBDevice *pDevice)
 		pThis->m_pConfigDesc = (TUSBConfigurationDescriptor *) malloc (nTotalLength);
 		assert (pThis->m_pConfigDesc != 0);
 
-		uspi_memcpy (pThis->m_pConfigDesc, pDevice->m_pConfigDesc, nTotalLength);
+		memcpy (pThis->m_pConfigDesc, pDevice->m_pConfigDesc, nTotalLength);
 
 		if (pDevice->m_pConfigParser != 0)
 		{

@@ -7,7 +7,7 @@
 //	no ISO transfers
 //	no dynamic attachments
 //
-// Circle - A C++ bare metal environment for Raspberry Pi
+// USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify

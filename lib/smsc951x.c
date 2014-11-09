@@ -338,7 +338,7 @@ boolean SMSC951xDeviceSendFrame (TSMSC951xDevice *pThis, const void *pBuffer, un
 
 	assert (pThis->m_pTxBuffer != 0);
 	assert (pBuffer != 0);
-	uspi_memcpy (pThis->m_pTxBuffer+8, pBuffer, nLength);
+	memcpy (pThis->m_pTxBuffer+8, pBuffer, nLength);
 	
 	*(u32 *) &pThis->m_pTxBuffer[0] = TX_CMD_A_FIRST_SEG | TX_CMD_A_LAST_SEG | nLength;
 	*(u32 *) &pThis->m_pTxBuffer[4] = nLength;
@@ -394,7 +394,7 @@ boolean SMSC951xDeviceReceiveFrame (TSMSC951xDevice *pThis, void *pBuffer, unsig
 
 	//LogWrite (FromSMSC951x, LOG_DEBUG, "Frame received (status 0x%X)", nRxStatus);
 
-	uspi_memcpy (pBuffer, (u8 *) pBuffer + 4, nFrameLength);	// overwrite RX status
+	memcpy (pBuffer, (u8 *) pBuffer + 4, nFrameLength);	// overwrite RX status
 
 	assert (pResultLength != 0);
 	*pResultLength = nFrameLength;

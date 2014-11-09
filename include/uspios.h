@@ -1,7 +1,7 @@
 //
 // uspios.h
 //
-// External functions used the USPi library
+// External functions used by the USPi library
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -34,6 +34,10 @@ extern "C" {
 #define GPU_L2_CACHE_ENABLED		// normally enabled (can be disabled in config.txt)
 
 #define HZ	100			// timer ticks / second
+
+// Undefine this if you want to use your own implementation of the functions in uspi/util.h
+#define USPI_PROVIDE_MEM_FUNCTIONS	// mem*()
+#define USPI_PROVIDE_STR_FUNCTIONS	// str*()
 
 //
 // Memory allocation
@@ -77,10 +81,14 @@ void ConnectInterrupt (unsigned nIRQ, TInterruptHandler *pHandler, void *pParam)
 //
 // See: https://github.com/raspberrypi/firmware/wiki/Mailboxes
 //
+
+// returns != 0 if it is model A
 int IsModelA (void);				// "get board revision", check for model A (currently 0007 to 0009)
 
+// returns 0 on failure
 int SetPowerStateOn (unsigned nDeviceId);	// "set power state" to "on", wait until completed
 
+// returns 0 on failure
 int GetMACAddress (unsigned char Buffer[6]);	// "get board MAC address"
 
 //
