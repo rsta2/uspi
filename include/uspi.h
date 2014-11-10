@@ -34,6 +34,37 @@ extern "C" {
 int USPiInitialize (void);
 
 //
+// Keyboard device
+//
+
+// returns != 0 if available
+int USPiKeyboardAvailable (void);
+
+// "cooked mode"
+typedef void TUSPiKeyPressedHandler (const char *pString);
+void USPiKeyboardRegisterKeyPressedHandler (TUSPiKeyPressedHandler *pKeyPressedHandler);
+
+// This handler is called when Ctrl-Alt-Del is pressed.
+typedef void TUSPiShutdownHandler (void);
+void USPiKeyboardRegisterShutdownHandler (TUSPiShutdownHandler *pShutdownHandler);
+
+// "raw mode" (if this handler is registered the others are ignored)
+// The raw handler is called when the keyboard sends a status report (on status change and/or continously).
+typedef void TUSPiKeyStatusHandlerRaw (unsigned char	     ucModifiers,
+				       const unsigned char *pRawKeys);  // 0-terminated (max. 6 physical key codes)
+void USPiKeyboardRegisterKeyStatusHandlerRaw (TUSPiKeyStatusHandlerRaw *pKeyStatusHandlerRaw);
+
+// ucModifiers (bit is set if modifier key is pressed)
+#define LCTRL		(1 << 0)
+#define LSHIFT		(1 << 1)
+#define ALT		(1 << 2)
+#define LWIN		(1 << 3)
+#define RCTRL		(1 << 4)
+#define RSHIFT		(1 << 5)
+#define ALTGR		(1 << 6)
+#define RWIN		(1 << 7)
+
+//
 // Mass storage device
 //
 

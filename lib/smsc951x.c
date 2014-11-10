@@ -1,5 +1,5 @@
 //
-// smsc951x.cpp
+// smsc951x.c
 //
 // Information to implement this driver was taken
 // from the Linux smsc95xx driver which is:

@@ -77,6 +77,8 @@ int USPiInitialize (void)
 		return 0;
 	}
 
+	s_pLibrary->pUKBD1 = (TUSBKeyboardDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "ukbd1", FALSE);
+	
 	s_pLibrary->pUMSD1 = (TUSBBulkOnlyMassStorageDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "umsd1", TRUE);
 
 	s_pLibrary->pEth0 = (TSMSC951xDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "eth0", FALSE);
@@ -84,6 +86,33 @@ int USPiInitialize (void)
 	LogWrite (FromUSPi, LOG_DEBUG, "USPi library successfully initialized");
 
 	return 1;
+}
+
+int USPiKeyboardAvailable (void)
+{
+	assert (s_pLibrary != 0);
+	return s_pLibrary->pUKBD1 != 0;
+}
+
+void USPiKeyboardRegisterKeyPressedHandler (TUSPiKeyPressedHandler *pKeyPressedHandler)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUKBD1 != 0);
+	USBKeyboardDeviceRegisterKeyPressedHandler (s_pLibrary->pUKBD1, pKeyPressedHandler);
+}
+
+void USPiKeyboardRegisterShutdownHandler (TUSPiShutdownHandler *pShutdownHandler)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUKBD1 != 0);
+	USBKeyboardDeviceRegisterShutdownHandler (s_pLibrary->pUKBD1, pShutdownHandler);
+}
+
+void USPiKeyboardRegisterKeyStatusHandlerRaw (TKeyStatusHandlerRaw *pKeyStatusHandlerRaw)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUKBD1 != 0);
+	USBKeyboardDeviceRegisterKeyStatusHandlerRaw (s_pLibrary->pUKBD1, pKeyStatusHandlerRaw);
 }
 
 int USPiMassStorageDeviceAvailable (void)

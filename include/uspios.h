@@ -35,6 +35,10 @@ extern "C" {
 
 #define HZ	100			// timer ticks / second
 
+// Default keyboard map (enable only one)
+//#define USPI_DEFAULT_KEYMAP_UK
+#define USPI_DEFAULT_KEYMAP_DE
+
 // Undefine this if you want to use your own implementation of the functions in uspi/util.h
 #define USPI_PROVIDE_MEM_FUNCTIONS	// mem*()
 #define USPI_PROVIDE_STR_FUNCTIONS	// str*()

@@ -1,5 +1,5 @@
 //
-// usbendpoint.cpp
+// usbendpoint.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>

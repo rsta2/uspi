@@ -18,14 +18,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include <uspi/dwhcixferstagedata.h>
+#include <uspi/dwhciframeschedper.h>
+#include <uspi/dwhciframeschednper.h>
 #include <uspi/dwhci.h>
 #include <uspios.h>
 #include <uspi/assert.h>
-
-#ifdef SPLIT_SUPPORT				// will come in one of the next steps
-	#include "dwhciframeschedper.h"
-	#include "dwhciframeschednper.h"
-#endif
 
 #define MAX_SPLIT_CYCLES	100
 
@@ -111,18 +108,17 @@ void DWHCITransferStageData (TDWHCITransferStageData *pThis, unsigned nChannel, 
 
 	if (pThis->m_bSplitTransaction)
 	{
-#ifdef SPLIT_SUPPORT
 		if (DWHCITransferStageDataIsPeriodic (pThis))
 		{
-			pThis->m_pFrameScheduler = (TDWHCIFrameSchedulerPeriodic *) malloc (sizeof (TDWHCIFrameSchedulerPeriodic));
-			DWHCIFrameSchedulerPeriodic (pThis->m_pFrameScheduler);
+			pThis->m_pFrameScheduler = (TDWHCIFrameScheduler *) malloc (sizeof (TDWHCIFrameSchedulerPeriodic));
+			DWHCIFrameSchedulerPeriodic ((TDWHCIFrameSchedulerPeriodic *) pThis->m_pFrameScheduler);
 		}
 		else
 		{
-			pThis->m_pFrameScheduler = (TDWHCIFrameSchedulerNonPeriodic *) malloc (sizeof (TDWHCIFrameSchedulerNonPeriodic));
-			DWHCIFrameSchedulerNonPeriodic (pThis->m_pFrameScheduler);
+			pThis->m_pFrameScheduler = (TDWHCIFrameScheduler *) malloc (sizeof (TDWHCIFrameSchedulerNonPeriodic));
+			DWHCIFrameSchedulerNonPeriodic ((TDWHCIFrameSchedulerNonPeriodic *) pThis->m_pFrameScheduler);
 		}
-#endif
+
 		assert (pThis->m_pFrameScheduler != 0);
 	}
 }

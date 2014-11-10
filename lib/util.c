@@ -1,5 +1,5 @@
 //
-// util.cpp
+// util.c
 //
 // Circle - A C++ bare metal environment for Raspberry Pi
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>

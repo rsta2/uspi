@@ -1,5 +1,5 @@
 //
-// usbdevicefactory.cpp
+// usbdevicefactory.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -24,7 +24,7 @@
 // for factory
 #include <uspi/usbstandardhub.h>
 #include <uspi/usbmassdevice.h>
-//#include <uspi/usbkeyboard.h>
+#include <uspi/usbkeyboard.h>
 #include <uspi/smsc951x.h>
 
 TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName);
@@ -67,7 +67,6 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		USBBulkOnlyMassStorageDevice (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
-#if 0
 	else if (StringCompare (pName, "int3-1-1") == 0)
 	{
 		TUSBKeyboardDevice *pDevice = (TUSBKeyboardDevice *) malloc (sizeof (TUSBKeyboardDevice));
@@ -75,7 +74,6 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		USBKeyboardDevice (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
-#endif
 	else if (StringCompare (pName, "ven424-ec00") == 0)
 	{
 		TSMSC951xDevice *pDevice = (TSMSC951xDevice *) malloc (sizeof (TSMSC951xDevice));

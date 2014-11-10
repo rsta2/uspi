@@ -22,7 +22,8 @@ OBJS	= uspilibrary.o \
 	  dwhcidevice.o dwhciregister.o dwhcixferstagedata.o \
 	  usbconfigparser.o usbdevice.o usbdevicefactory.o usbendpoint.o usbrequest.o usbstandardhub.o \
 	  devicenameservice.o macaddress.o smsc951x.o string.o util.o \
-	  usbmassdevice.o
+	  usbmassdevice.o \
+	  dwhciframeschednper.o dwhciframeschedper.o keymap.o usbkeyboard.o
 
 libuspi.a: $(OBJS)
 	rm -f libuspi.a

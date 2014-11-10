@@ -1,5 +1,5 @@
 //
-// usbstandardhub.cpp
+// usbstandardhub.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -319,9 +319,7 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 		TUSBSpeed Speed = USBSpeedUnknown;
 		if (pThis->m_pStatus[nPort]->wPortStatus & PORT_LOW_SPEED__MASK)
 		{
-			//Speed = USBSpeedLow;
-			LogWrite (FromHub, LOG_WARNING, "Port %u: Low-speed devices are not supported at the moment", nPort+1);
-			continue;
+			Speed = USBSpeedLow;
 		}
 		else if (pThis->m_pStatus[nPort]->wPortStatus & PORT_HIGH_SPEED__MASK)
 		{
@@ -329,9 +327,7 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 		}
 		else
 		{
-			//Speed = USBSpeedFull;
-			LogWrite (FromHub, LOG_WARNING, "Port %u: Full-speed devices are not supported at the moment", nPort+1);
-			continue;
+			Speed = USBSpeedFull;
 		}
 
 		// first create default device

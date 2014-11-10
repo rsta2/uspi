@@ -20,6 +20,8 @@
 #ifndef _uspi_dwhci_h
 #define _uspi_dwhci_h
 
+#include <uspi/bcm2835.h>
+
 #define DWHCI_MAX_CHANNELS		16
 
 #define DWHCI_DATA_FIFO_SIZE 		0x1000

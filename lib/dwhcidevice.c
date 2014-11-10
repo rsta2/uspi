@@ -1,5 +1,5 @@
 //
-// dwhcidevice.cpp
+// dwhcidevice.c
 //
 // Supports:
 //	high-speed UTMI+ 8 bit PHY
