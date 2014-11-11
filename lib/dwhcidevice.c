@@ -112,10 +112,19 @@ boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
 {
 	assert (pThis != 0);
 
-	// Check for model A to prevent non-high-speed devices from over-clocking
-	if (IsModelA ())
+	// Check model to prevent non-high-speed devices from over-clocking
+	int nRevision = GetBoardRevision ();
+	if (nRevision < 0)
 	{
-		LogWrite (FromDWHCI, LOG_ERROR, "Model A is not supported");
+		LogWrite (FromDWHCI, LOG_ERROR, "Cannot get board revision");
+		return FALSE;
+	}
+
+	nRevision &= 0xFFFF;
+	if (   (7 <= nRevision && nRevision <= 9)
+	    || nRevision >= 0x11)
+	{
+		LogWrite (FromDWHCI, LOG_ERROR, "Model is not supported");
 		return FALSE;
 	}
 

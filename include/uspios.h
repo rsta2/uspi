@@ -86,8 +86,8 @@ void ConnectInterrupt (unsigned nIRQ, TInterruptHandler *pHandler, void *pParam)
 // See: https://github.com/raspberrypi/firmware/wiki/Mailboxes
 //
 
-// returns != 0 if it is model A
-int IsModelA (void);				// "get board revision", check for model A (currently 0007 to 0009)
+// returns board revision or < 0 on failure
+int GetBoardRevision (void);			// "get board revision"
 
 // returns 0 on failure
 int SetPowerStateOn (unsigned nDeviceId);	// "set power state" to "on", wait until completed
