@@ -51,7 +51,7 @@ void USPiKeyboardRegisterShutdownHandler (TUSPiShutdownHandler *pShutdownHandler
 // "raw mode" (if this handler is registered the others are ignored)
 // The raw handler is called when the keyboard sends a status report (on status change and/or continously).
 typedef void TUSPiKeyStatusHandlerRaw (unsigned char	     ucModifiers,
-				       const unsigned char *pRawKeys);  // 0-terminated (max. 6 physical key codes)
+				       const unsigned char   RawKeys[6]);  // key code or 0 in each byte
 void USPiKeyboardRegisterKeyStatusHandlerRaw (TUSPiKeyStatusHandlerRaw *pKeyStatusHandlerRaw);
 
 // ucModifiers (bit is set if modifier key is pressed)
