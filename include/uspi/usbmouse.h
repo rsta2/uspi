@@ -1,5 +1,5 @@
 //
-// usbstandardhub.h
+// usbmouse.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -17,42 +17,39 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _usbstandardhub_h
-#define _usbstandardhub_h
+#ifndef _usbmouse_h
+#define _usbmouse_h
 
-#include <uspi/usb.h>
-#include <uspi/usbhub.h>
 #include <uspi/usbdevice.h>
-#include <uspi/usbhostcontroller.h>
-#include <uspi/string.h>
+#include <uspi/usbendpoint.h>
+#include <uspi/usbrequest.h>
 #include <uspi/types.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define MOUSE_BOOT_REPORT_SIZE	3
 
-typedef struct TUSBStandardHub
+typedef void TMouseStatusHandler (unsigned nButtons, int nDisplacementX, int nDisplacementY);
+
+typedef struct TUSBMouseDevice
 {
 	TUSBDevice m_USBDevice;
 
-	TUSBHubDescriptor *m_pHubDesc;
+	u8 m_ucInterfaceNumber;
+	u8 m_ucAlternateSetting;
 
-	unsigned m_nPorts;
-	TUSBDevice *m_pDevice[USB_HUB_MAX_PORTS];
-	TUSBPortStatus *m_pStatus[USB_HUB_MAX_PORTS];
+	TUSBEndpoint *m_pReportEndpoint;
+
+	TMouseStatusHandler *m_pStatusHandler;
+
+	TUSBRequest *m_pURB;
+	u8 *m_pReportBuffer;
 }
-TUSBStandardHub;
+TUSBMouseDevice;
 
-void USBStandardHub (TUSBStandardHub *pThis, TUSBDevice *pDevice);
-void _USBStandardHub (TUSBStandardHub *pThis);
+void USBMouseDevice (TUSBMouseDevice *pThis, TUSBDevice *pDevice);
+void _CUSBMouseDevice (TUSBMouseDevice *pThis);
 
-boolean USBStandardHubInitialize (TUSBStandardHub *pThis);
-boolean USBStandardHubConfigure (TUSBDevice *pUSBDevice);
+boolean USBMouseDeviceConfigure (TUSBDevice *pUSBDevice);
 
-TString *USBStandardHubGetDeviceNames (TUSBDevice *pDevice);
-
-#ifdef __cplusplus
-}
-#endif
+void USBMouseDeviceRegisterStatusHandler (TUSBMouseDevice *pThis, TMouseStatusHandler *pStatusHandler);
 
 #endif

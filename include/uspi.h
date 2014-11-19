@@ -65,6 +65,34 @@ void USPiKeyboardRegisterKeyStatusHandlerRaw (TUSPiKeyStatusHandlerRaw *pKeyStat
 #define RWIN		(1 << 7)
 
 //
+// Mouse device
+//
+
+// returns != 0 if available
+int USPiMouseAvailable (void);
+
+// The status handler is called when the mouse sends a status report.
+typedef void TUSPiMouseStatusHandler (unsigned nButtons,
+				      int nDisplacementX,		// -127..127
+				      int nDisplacementY);		// -127..127
+void USPiMouseRegisterStatusHandler (TUSPiMouseStatusHandler *pStatusHandler);
+
+// nButtons (bit is set if button is pressed)
+#define MOUSE_BUTTON1	(1 << 0)
+#define MOUSE_BUTTON2	(1 << 1)
+#define MOUSE_BUTTON3	(1 << 2)
+
+// ucModifiers (bit is set if modifier key is pressed)
+#define LCTRL		(1 << 0)
+#define LSHIFT		(1 << 1)
+#define ALT		(1 << 2)
+#define LWIN		(1 << 3)
+#define RCTRL		(1 << 4)
+#define RSHIFT		(1 << 5)
+#define ALTGR		(1 << 6)
+#define RWIN		(1 << 7)
+
+//
 // Mass storage device
 //
 

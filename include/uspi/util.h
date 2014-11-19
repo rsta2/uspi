@@ -57,6 +57,8 @@ char *strncpy (char *pDest, const char *pSrc, size_t nMaxLen);
 
 char *strcat (char *pDest, const char *pSrc);
 
+int uspi_char2int (char chValue);		// with sign extension
+
 u16 uspi_le2be16 (u16 usValue);
 
 u32 uspi_le2be32 (u32 ulValue);

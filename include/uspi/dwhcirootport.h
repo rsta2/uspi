@@ -1,5 +1,5 @@
 //
-// usbstandardhub.h
+// dwhcirootport.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -17,39 +17,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _usbstandardhub_h
-#define _usbstandardhub_h
+#ifndef _uspi_dwhcirootport_h
+#define _uspi_dwhcirootport_h
 
-#include <uspi/usb.h>
-#include <uspi/usbhub.h>
 #include <uspi/usbdevice.h>
-#include <uspi/usbhostcontroller.h>
-#include <uspi/string.h>
 #include <uspi/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct TUSBStandardHub
+struct TDWHCIDevice;
+
+typedef struct TDWHCIRootPort
 {
-	TUSBDevice m_USBDevice;
+	struct TDWHCIDevice *m_pHost;
 
-	TUSBHubDescriptor *m_pHubDesc;
-
-	unsigned m_nPorts;
-	TUSBDevice *m_pDevice[USB_HUB_MAX_PORTS];
-	TUSBPortStatus *m_pStatus[USB_HUB_MAX_PORTS];
+	TUSBDevice *m_pDevice;
 }
-TUSBStandardHub;
+TDWHCIRootPort;
 
-void USBStandardHub (TUSBStandardHub *pThis, TUSBDevice *pDevice);
-void _USBStandardHub (TUSBStandardHub *pThis);
+void DWHCIRootPort (TDWHCIRootPort *pThis, struct TDWHCIDevice *pHost);
+void _DWHCIRootPort (TDWHCIRootPort *pThis);
 
-boolean USBStandardHubInitialize (TUSBStandardHub *pThis);
-boolean USBStandardHubConfigure (TUSBDevice *pUSBDevice);
-
-TString *USBStandardHubGetDeviceNames (TUSBDevice *pDevice);
+boolean DWHCIRootPortInitialize (TDWHCIRootPort *pThis);
 
 #ifdef __cplusplus
 }

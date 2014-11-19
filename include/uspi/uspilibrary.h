@@ -22,8 +22,8 @@
 
 #include <uspi/devicenameservice.h>
 #include <uspi/dwhcidevice.h>
-#include <uspi/usbstandardhub.h>
 #include <uspi/usbkeyboard.h>
+#include <uspi/usbmouse.h>
 #include <uspi/usbmassdevice.h>
 #include <uspi/smsc951x.h>
 
@@ -35,8 +35,8 @@ typedef struct TUSPiLibrary
 {
 	TDeviceNameService		 NameService;
 	TDWHCIDevice			 DWHCI;
-	TUSBStandardHub			 USBHub1;
 	TUSBKeyboardDevice		*pUKBD1;
+	TUSBMouseDevice			*pUMouse1;
 	TUSBBulkOnlyMassStorageDevice	*pUMSD1;
 	TSMSC951xDevice			*pEth0;
 }

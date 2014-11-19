@@ -23,9 +23,11 @@
 #include <uspi/usb.h>
 #include <uspi/usbendpoint.h>
 #include <uspi/usbrequest.h>
+#include <uspi/dwhcirootport.h>
 #include <uspi/dwhcixferstagedata.h>
 #include <uspi/dwhciregister.h>
 #include <uspi/dwhci.h>
+#include <uspi/usb.h>
 #include <uspi/types.h>
 #include <uspios.h>
 
@@ -41,6 +43,8 @@ typedef struct TDWHCIDevice
 	TDWHCITransferStageData *m_pStageData[DWHCI_MAX_CHANNELS];
 
 	volatile boolean m_bWaiting;
+
+	TDWHCIRootPort m_RootPort;
 }
 TDWHCIDevice;
 
@@ -69,6 +73,10 @@ int DWHCIDeviceTransfer (TDWHCIDevice *pThis, TUSBEndpoint *pEndpoint, void *pBu
 
 boolean DWHCIDeviceSubmitBlockingRequest (TDWHCIDevice *pThis, TUSBRequest *pURB);
 boolean DWHCIDeviceSubmitAsyncRequest (TDWHCIDevice *pThis, TUSBRequest *pURB);
+
+TUSBSpeed DWHCIDeviceGetPortSpeed (TDWHCIDevice *pThis);
+boolean DWHCIDeviceOvercurrentDetected (TDWHCIDevice *pThis);
+void DWHCIDeviceDisableRootPort (TDWHCIDevice *pThis);
 
 #ifdef __cplusplus
 }

@@ -35,40 +35,12 @@ int USPiInitialize (void)
 
 	DeviceNameService (&s_pLibrary->NameService);
 	DWHCIDevice (&s_pLibrary->DWHCI);
-	USBStandardHub (&s_pLibrary->USBHub1, &s_pLibrary->DWHCI, USBSpeedHigh);
 	s_pLibrary->pEth0 = 0;
 
 	if (!DWHCIDeviceInitialize (&s_pLibrary->DWHCI))
 	{
 		LogWrite (FromUSPi, LOG_ERROR, "Cannot initialize USB host controller interface");
 
-		_USBStandardHub (&s_pLibrary->USBHub1);
-		_DWHCIDevice (&s_pLibrary->DWHCI);
-		_DeviceNameService (&s_pLibrary->NameService);
-		free (s_pLibrary);
-		s_pLibrary = 0;
-
-		return 0;
-	}
-
-	if (!USBStandardHubInitialize (&s_pLibrary->USBHub1))
-	{
-		LogWrite (FromUSPi, LOG_ERROR, "Cannot initialize USB root hub");
-
-		_USBStandardHub (&s_pLibrary->USBHub1);
-		_DWHCIDevice (&s_pLibrary->DWHCI);
-		_DeviceNameService (&s_pLibrary->NameService);
-		free (s_pLibrary);
-		s_pLibrary = 0;
-
-		return 0;
-	}
-
-	if (!USBStandardHubConfigure (&s_pLibrary->USBHub1))
-	{
-		LogWrite (FromUSPi, LOG_ERROR, "USB device enumeration failed");
-
-		_USBStandardHub (&s_pLibrary->USBHub1);
 		_DWHCIDevice (&s_pLibrary->DWHCI);
 		_DeviceNameService (&s_pLibrary->NameService);
 		free (s_pLibrary);
@@ -78,6 +50,8 @@ int USPiInitialize (void)
 	}
 
 	s_pLibrary->pUKBD1 = (TUSBKeyboardDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "ukbd1", FALSE);
+	
+	s_pLibrary->pUMouse1 = (TUSBMouseDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "umouse1", FALSE);
 	
 	s_pLibrary->pUMSD1 = (TUSBBulkOnlyMassStorageDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "umsd1", TRUE);
 
@@ -113,6 +87,19 @@ void USPiKeyboardRegisterKeyStatusHandlerRaw (TKeyStatusHandlerRaw *pKeyStatusHa
 	assert (s_pLibrary != 0);
 	assert (s_pLibrary->pUKBD1 != 0);
 	USBKeyboardDeviceRegisterKeyStatusHandlerRaw (s_pLibrary->pUKBD1, pKeyStatusHandlerRaw);
+}
+
+int USPiMouseAvailable (void)
+{
+	assert (s_pLibrary != 0);
+	return s_pLibrary->pUMouse1 != 0;
+}
+
+void USPiMouseRegisterStatusHandler (TUSPiMouseStatusHandler *pStatusHandler)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUMouse1 != 0);
+	USBMouseDeviceRegisterStatusHandler (s_pLibrary->pUMouse1, pStatusHandler);
 }
 
 int USPiMassStorageDeviceAvailable (void)

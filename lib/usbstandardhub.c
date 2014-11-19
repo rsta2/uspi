@@ -24,31 +24,15 @@
 #include <uspi/assert.h>
 
 boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis);
-TString *USBStandardHubGetDeviceNames (TUSBDevice *pDevice);
 
 static const char FromHub[] = "usbhub";
 
-void USBStandardHub (TUSBStandardHub *pThis, TUSBHostController *pHost, TUSBSpeed Speed)
-{
-	assert (pThis != 0);
-
-	USBDevice (&pThis->m_USBDevice, pHost, Speed, 0, 1),
-
-	pThis->m_pHubDesc = 0;
-	pThis->m_nPorts = 0;
-
-	for (unsigned nPort = 0; nPort < USB_HUB_MAX_PORTS; nPort++)
-	{
-		pThis->m_pDevice[nPort] = 0;
-		pThis->m_pStatus[nPort] = 0;
-	}
-}
-
-void USBStandardHub2 (TUSBStandardHub *pThis, TUSBDevice *pDevice)
+void USBStandardHub (TUSBStandardHub *pThis, TUSBDevice *pDevice)
 {
 	assert (pThis != 0);
 
 	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
+	pThis->m_USBDevice.Configure = USBStandardHubConfigure;
 	
 	pThis->m_pHubDesc = 0;
 	pThis->m_nPorts = 0;
@@ -97,8 +81,9 @@ boolean USBStandardHubInitialize (TUSBStandardHub *pThis)
 	return USBDeviceInitialize (&pThis->m_USBDevice);
 }
 
-boolean USBStandardHubConfigure (TUSBStandardHub *pThis)
+boolean USBStandardHubConfigure (TUSBDevice *pUSBDevice)
 {
+	TUSBStandardHub *pThis = (TUSBStandardHub *) pUSBDevice;
 	assert (pThis != 0);
 
 	const TUSBDeviceDescriptor *pDeviceDesc = USBDeviceGetDeviceDescriptor (&pThis->m_USBDevice);

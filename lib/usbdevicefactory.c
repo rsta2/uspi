@@ -25,6 +25,7 @@
 #include <uspi/usbstandardhub.h>
 #include <uspi/usbmassdevice.h>
 #include <uspi/usbkeyboard.h>
+#include <uspi/usbmouse.h>
 #include <uspi/smsc951x.h>
 
 TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName);
@@ -57,7 +58,7 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 	{
 		TUSBStandardHub *pDevice = (TUSBStandardHub *) malloc (sizeof (TUSBStandardHub));
 		assert (pDevice != 0);
-		USBStandardHub2 (pDevice, pParent);
+		USBStandardHub (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
 	else if (StringCompare (pName, "int8-6-50") == 0)
@@ -72,6 +73,13 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		TUSBKeyboardDevice *pDevice = (TUSBKeyboardDevice *) malloc (sizeof (TUSBKeyboardDevice));
 		assert (pDevice != 0);
 		USBKeyboardDevice (pDevice, pParent);
+		pResult = (TUSBDevice *) pDevice;
+	}
+	else if (StringCompare (pName, "int3-1-2") == 0)
+	{
+		TUSBMouseDevice *pDevice = (TUSBMouseDevice *) malloc (sizeof (TUSBMouseDevice));
+		assert (pDevice != 0);
+		USBMouseDevice (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
 	else if (StringCompare (pName, "ven424-ec00") == 0)

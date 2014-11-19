@@ -2,8 +2,7 @@
 // dwhcidevice.c
 //
 // Supports:
-//	high-speed UTMI+ 8 bit PHY
-//	with internal DMA only,
+//	internal DMA only,
 //	no ISO transfers
 //	no dynamic attachments
 //
@@ -97,6 +96,7 @@ void DWHCIDevice (TDWHCIDevice *pThis)
 	pThis->m_nChannels = 0;
 	pThis->m_nChannelAllocated = 0;
 	pThis->m_bWaiting = FALSE;
+	DWHCIRootPort (&pThis->m_RootPort, pThis);
 
 	for (unsigned nChannel = 0; nChannel < DWHCI_MAX_CHANNELS; nChannel++)
 	{
@@ -106,6 +106,7 @@ void DWHCIDevice (TDWHCIDevice *pThis)
 
 void _DWHCIDevice (TDWHCIDevice *pThis)
 {
+	_DWHCIRootPort (&pThis->m_RootPort);
 }
 
 boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
@@ -173,14 +174,25 @@ boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
 		return FALSE;
 	}
 
+	// The following calls will fail if there is no device or no supported device connected
+	// to root port. This is not an error because the system may run without an USB device.
+
 	if (!DWHCIDeviceEnableRootPort (pThis))
 	{
-		LogWrite (FromDWHCI, LOG_ERROR, "Cannot enable root port");
+		LogWrite (FromDWHCI, LOG_WARNING, "No device connected to root port");
 		_DWHCIRegister (&AHBConfig);
 		_DWHCIRegister (&VendorId);
-		return FALSE;
+		return TRUE;
 	}
 
+	if (!DWHCIRootPortInitialize (&pThis->m_RootPort))
+	{
+		LogWrite (FromDWHCI, LOG_WARNING, "Cannot initialize root port");
+		_DWHCIRegister (&AHBConfig);
+		_DWHCIRegister (&VendorId);
+		return TRUE;
+	}
+	
 	DataMemBarrier ();
 
 	_DWHCIRegister (&AHBConfig);
@@ -368,18 +380,22 @@ boolean DWHCIDeviceInitCore (TDWHCIDevice *pThis)
 {
 	assert (pThis != 0);
 
+	TDWHCIRegister USBConfig;
+	DWHCIRegister (&USBConfig, DWHCI_CORE_USB_CFG);
+	DWHCIRegisterRead (&USBConfig);
+	DWHCIRegisterAnd (&USBConfig, ~DWHCI_CORE_USB_CFG_ULPI_EXT_VBUS_DRV);
+	DWHCIRegisterAnd (&USBConfig, ~DWHCI_CORE_USB_CFG_TERM_SEL_DL_PULSE);
+	DWHCIRegisterWrite (&USBConfig);
+
 	if (!DWHCIDeviceReset (pThis))
 	{
 		LogWrite (FromDWHCI, LOG_ERROR, "Reset failed");
 		return FALSE;
 	}
 
-	// We only support high-speed PHY with UTMI+
-	TDWHCIRegister USBConfig;
-	DWHCIRegister (&USBConfig, DWHCI_CORE_USB_CFG);
 	DWHCIRegisterRead (&USBConfig);
 	DWHCIRegisterAnd (&USBConfig, ~DWHCI_CORE_USB_CFG_ULPI_UTMI_SEL);	// select UTMI+
-	//DWHCIRegisterOr (&USBConfig, DWHCI_CORE_USB_CFG_PHYIF);	// if UTMI width is 16 (not in BCM2835)
+	DWHCIRegisterAnd (&USBConfig, ~DWHCI_CORE_USB_CFG_PHYIF);		// UTMI width is 8
 	DWHCIRegisterWrite (&USBConfig);
 
 	// Internal DMA mode only
@@ -388,6 +404,20 @@ boolean DWHCIDeviceInitCore (TDWHCIDevice *pThis)
 	DWHCIRegisterRead (&HWConfig2);
 	assert (DWHCI_CORE_HW_CFG2_ARCHITECTURE (DWHCIRegisterGet (&HWConfig2)) == 2);
 	
+	DWHCIRegisterRead (&USBConfig);
+	if (   DWHCI_CORE_HW_CFG2_HS_PHY_TYPE (DWHCIRegisterGet (&HWConfig2)) == DWHCI_CORE_HW_CFG2_HS_PHY_TYPE_ULPI
+	    && DWHCI_CORE_HW_CFG2_FS_PHY_TYPE (DWHCIRegisterGet (&HWConfig2)) == DWHCI_CORE_HW_CFG2_FS_PHY_TYPE_DEDICATED)
+	{
+		DWHCIRegisterOr (&USBConfig, DWHCI_CORE_USB_CFG_ULPI_FSLS);
+		DWHCIRegisterOr (&USBConfig, DWHCI_CORE_USB_CFG_ULPI_CLK_SUS_M);
+	}
+	else
+	{
+		DWHCIRegisterAnd (&USBConfig, ~DWHCI_CORE_USB_CFG_ULPI_FSLS);
+		DWHCIRegisterAnd (&USBConfig, ~DWHCI_CORE_USB_CFG_ULPI_CLK_SUS_M);
+	}
+	DWHCIRegisterWrite (&USBConfig);
+
 	assert (pThis->m_nChannels == 0);
 	pThis->m_nChannels = DWHCI_CORE_HW_CFG2_NUM_HOST_CHANNELS (DWHCIRegisterGet (&HWConfig2));
 	assert (4 <= pThis->m_nChannels && pThis->m_nChannels <= DWHCI_MAX_CHANNELS);
@@ -425,6 +455,28 @@ boolean DWHCIDeviceInitHost (TDWHCIDevice *pThis)
 	TDWHCIRegister Power;
 	DWHCIRegister2 (&Power, ARM_USB_POWER, 0);
 	DWHCIRegisterWrite (&Power);
+
+	TDWHCIRegister HostConfig;
+	DWHCIRegister (&HostConfig, DWHCI_HOST_CFG);
+	DWHCIRegisterRead (&HostConfig);
+	DWHCIRegisterAnd (&HostConfig, ~DWHCI_HOST_CFG_FSLS_PCLK_SEL__MASK);
+
+	TDWHCIRegister HWConfig2;
+	DWHCIRegister (&HWConfig2, DWHCI_CORE_HW_CFG2);
+	TDWHCIRegister USBConfig;
+	DWHCIRegister (&USBConfig, DWHCI_CORE_USB_CFG);
+	if (   DWHCI_CORE_HW_CFG2_HS_PHY_TYPE (DWHCIRegisterRead (&HWConfig2)) == DWHCI_CORE_HW_CFG2_HS_PHY_TYPE_ULPI
+	    && DWHCI_CORE_HW_CFG2_FS_PHY_TYPE (DWHCIRegisterGet (&HWConfig2)) == DWHCI_CORE_HW_CFG2_FS_PHY_TYPE_DEDICATED
+	    && (DWHCIRegisterRead (&USBConfig) & DWHCI_CORE_USB_CFG_ULPI_FSLS))
+	{
+		DWHCIRegisterOr (&HostConfig, DWHCI_HOST_CFG_FSLS_PCLK_SEL_48_MHZ);
+	}
+	else
+	{
+		DWHCIRegisterOr (&HostConfig, DWHCI_HOST_CFG_FSLS_PCLK_SEL_30_60_MHZ);
+	}
+
+	DWHCIRegisterWrite (&HostConfig);
 
 #ifdef DWC_CFG_DYNAMIC_FIFO
 	TDWHCIRegister RxFIFOSize;
@@ -465,6 +517,9 @@ boolean DWHCIDeviceInitHost (TDWHCIDevice *pThis)
 	_DWHCIRegister (&NonPeriodicTxFIFOSize);
 	_DWHCIRegister (&RxFIFOSize);
 #endif
+	_DWHCIRegister (&USBConfig);
+	_DWHCIRegister (&HWConfig2);
+	_DWHCIRegister (&HostConfig);
 	_DWHCIRegister (&Power);
 
 	return TRUE;
@@ -498,19 +553,6 @@ boolean DWHCIDeviceEnableRootPort (TDWHCIDevice *pThis)
 	DWHCIRegisterWrite (&HostPort);
 
 	MsDelay (10);			// see USB 2.0 spec (tRSTRCY)
-
-	if (DWHCI_HOST_PORT_SPEED (DWHCIRegisterRead (&HostPort)) != DWHCI_HOST_PORT_SPEED_HIGH)
-	{
-		DWHCIRegisterAnd (&HostPort, ~DWHCI_HOST_PORT_DEFAULT_MASK);
-		DWHCIRegisterAnd (&HostPort, ~DWHCI_HOST_PORT_POWER);
-		DWHCIRegisterWrite (&HostPort);
-
-		LogWrite (FromDWHCI, LOG_ERROR, "Device at root port is not high-speed");
-
-		_DWHCIRegister (&HostPort);
-
-		return FALSE;
-	}
 
 	_DWHCIRegister (&HostPort);
 
@@ -1269,6 +1311,71 @@ boolean DWHCIDeviceWaitForBit (TDWHCIDevice *pThis, TDWHCIRegister *pRegister, u
 	}
 	
 	return TRUE;
+}
+
+TUSBSpeed DWHCIDeviceGetPortSpeed (TDWHCIDevice *pThis)
+{
+	assert (pThis != 0);
+
+	TUSBSpeed Result = USBSpeedUnknown;
+	
+	TDWHCIRegister HostPort;
+	DWHCIRegister (&HostPort, DWHCI_HOST_PORT);
+
+	switch (DWHCI_HOST_PORT_SPEED (DWHCIRegisterRead (&HostPort)))
+	{
+	case DWHCI_HOST_PORT_SPEED_HIGH:
+		Result = USBSpeedHigh;
+		break;
+
+	case DWHCI_HOST_PORT_SPEED_FULL:
+		Result = USBSpeedFull;
+		break;
+
+	case DWHCI_HOST_PORT_SPEED_LOW:
+		Result = USBSpeedLow;
+		break;
+
+	default:
+		break;
+	}
+
+	_DWHCIRegister (&HostPort);
+
+	return Result;
+}
+
+boolean DWHCIDeviceOvercurrentDetected (TDWHCIDevice *pThis)
+{
+	assert (pThis != 0);
+
+	TDWHCIRegister HostPort;
+	DWHCIRegister (&HostPort, DWHCI_HOST_PORT);
+
+	if (DWHCIRegisterRead (&HostPort) & DWHCI_HOST_PORT_OVERCURRENT)
+	{
+		_DWHCIRegister (&HostPort);
+
+		return TRUE;
+	}
+
+	_DWHCIRegister (&HostPort);
+
+	return FALSE;
+}
+
+void DWHCIDeviceDisableRootPort (TDWHCIDevice *pThis)
+{
+	assert (pThis != 0);
+
+	TDWHCIRegister HostPort;
+	DWHCIRegister (&HostPort, DWHCI_HOST_PORT);
+
+	DWHCIRegisterRead (&HostPort);
+	DWHCIRegisterAnd (&HostPort, ~DWHCI_HOST_PORT_POWER);
+	DWHCIRegisterWrite (&HostPort);
+
+	_DWHCIRegister (&HostPort);
 }
 
 #ifndef NDEBUG

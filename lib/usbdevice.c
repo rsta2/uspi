@@ -442,5 +442,5 @@ void USBDeviceSetAddress (TUSBDevice *pThis, u8 ucAddress)
 	assert (ucAddress <= USB_MAX_ADDRESS);
 	pThis->m_ucAddress = ucAddress;
 
-	LogWrite (FromDevice, LOG_DEBUG, "Device address set to %u", (unsigned) pThis->m_ucAddress);
+	//LogWrite (FromDevice, LOG_DEBUG, "Device address set to %u", (unsigned) pThis->m_ucAddress);
 }
