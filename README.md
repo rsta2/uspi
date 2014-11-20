@@ -13,10 +13,11 @@ USPi was "mechanically" ported from the Circle USB library which is written in C
 Interface
 ---------
 
-The USPi library provides functions to be used by the bare metal environment to access USB devices. There are four groups of functions which are declared in *include/uspi.h*:
+The USPi library provides functions to be used by the bare metal environment to access USB devices. There are five groups of functions which are declared in *include/uspi.h*:
 
 * USPi initialization
 * Keyboard
+* Mouse
 * USB Mass storage device
 * Ethernet controller
 
