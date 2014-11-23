@@ -113,22 +113,6 @@ boolean DWHCIDeviceInitialize (TDWHCIDevice *pThis)
 {
 	assert (pThis != 0);
 
-	// Check model to prevent non-high-speed devices from over-clocking
-	int nRevision = GetBoardRevision ();
-	if (nRevision < 0)
-	{
-		LogWrite (FromDWHCI, LOG_ERROR, "Cannot get board revision");
-		return FALSE;
-	}
-
-	nRevision &= 0xFFFF;
-	if (   (7 <= nRevision && nRevision <= 9)
-	    || nRevision >= 0x11)
-	{
-		LogWrite (FromDWHCI, LOG_ERROR, "Model is not supported");
-		return FALSE;
-	}
-
 	DataMemBarrier ();
 
 	TDWHCIRegister VendorId;
@@ -552,7 +536,8 @@ boolean DWHCIDeviceEnableRootPort (TDWHCIDevice *pThis)
 	DWHCIRegisterAnd (&HostPort, ~DWHCI_HOST_PORT_RESET);
 	DWHCIRegisterWrite (&HostPort);
 
-	MsDelay (10);			// see USB 2.0 spec (tRSTRCY)
+	// normally 10ms, seems to be too short for some devices
+	MsDelay (20);			// see USB 2.0 spec (tRSTRCY)
 
 	_DWHCIRegister (&HostPort);
 
@@ -996,7 +981,7 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 
 		assert (   !DWHCITransferStageDataIsPeriodic (pStageData)
 			||    DWHCI_HOST_CHAN_XFER_SIZ_PID (DWHCIRegisterGet (&TransferSize))
-				!= DWHCI_HOST_CHAN_XFER_SIZ_PID_MDATA);
+			   != DWHCI_HOST_CHAN_XFER_SIZ_PID_MDATA);
 
 		DWHCITransferStageDataTransactionComplete (pStageData, DWHCIRegisterRead (&ChanInterrupt),
 			DWHCI_HOST_CHAN_XFER_SIZ_PACKETS (DWHCIRegisterGet (&TransferSize)),
@@ -1016,12 +1001,23 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 	switch (DWHCITransferStageDataGetState (pStageData))
 	{
 	case StageStateNoSplitTransfer:
-		DWHCIDeviceDisableChannelInterrupt (pThis, nChannel);
-	
 		nStatus = DWHCITransferStageDataGetTransactionStatus (pStageData);
 		if (nStatus & DWHCI_HOST_CHAN_INT_ERROR_MASK)
 		{
 			LogWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
+
+			USBRequestSetStatus (pURB, 0);
+		}
+		else if (   (nStatus & (DWHCI_HOST_CHAN_INT_NAK | DWHCI_HOST_CHAN_INT_NYET))
+			 && DWHCITransferStageDataIsPeriodic (pStageData))
+		{
+			DWHCITransferStageDataSetState (pStageData, StageStatePeriodicDelay);
+
+			unsigned nInterval = USBEndpointGetInterval (USBRequestGetEndpoint (pURB));
+
+			StartKernelTimer (MSEC2HZ (nInterval), DWHCIDeviceTimerHandler, pStageData, pThis);
+
+			break;
 		}
 		else
 		{
@@ -1033,6 +1029,8 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 			USBRequestSetStatus (pURB, 1);
 		}
 
+		DWHCIDeviceDisableChannelInterrupt (pThis, nChannel);
+	
 		_DWHCITransferStageData (pStageData);
 		free (pStageData);
 		pThis->m_pStageData[nChannel] = 0;
@@ -1049,6 +1047,8 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 		    || (nStatus & DWHCI_HOST_CHAN_INT_NYET))
 		{
 			LogWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
+
+			USBRequestSetStatus (pURB, 0);
 
 			DWHCIDeviceDisableChannelInterrupt (pThis, nChannel);
 
@@ -1081,6 +1081,8 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 		{
 			LogWrite (FromDWHCI, LOG_ERROR, "Transaction failed (status 0x%X)", nStatus);
 
+			USBRequestSetStatus (pURB, 0);
+
 			DWHCIDeviceDisableChannelInterrupt (pThis, nChannel);
 
 			_DWHCITransferStageData (pStageData);
@@ -1106,6 +1108,8 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 		{
 			if (!DWHCITransferStageDataBeginSplitCycle (pStageData))
 			{
+				USBRequestSetStatus (pURB, 0);
+
 				DWHCIDeviceDisableChannelInterrupt (pThis, nChannel);
 
 				_DWHCITransferStageData (pStageData);
@@ -1234,13 +1238,21 @@ void DWHCIDeviceTimerHandler (unsigned hTimer, void *pParam, void *pContext)
 
 	assert (pStageData != 0);
 	assert (DWHCITransferStageDataGetState (pStageData) == StageStatePeriodicDelay);
-	DWHCITransferStageDataSetState (pStageData, StageStateStartSplit);
-	
-	DWHCITransferStageDataSetSplitComplete (pStageData, FALSE);
-	TDWHCIFrameScheduler *pFrameScheduler =
-		DWHCITransferStageDataGetFrameScheduler (pStageData);
-	assert (pFrameScheduler != 0);
-	pFrameScheduler->StartSplit (pFrameScheduler);
+
+	if (DWHCITransferStageDataIsSplit (pStageData))
+	{
+		DWHCITransferStageDataSetState (pStageData, StageStateStartSplit);
+		
+		DWHCITransferStageDataSetSplitComplete (pStageData, FALSE);
+		TDWHCIFrameScheduler *pFrameScheduler =
+			DWHCITransferStageDataGetFrameScheduler (pStageData);
+		assert (pFrameScheduler != 0);
+		pFrameScheduler->StartSplit (pFrameScheduler);
+	}
+	else
+	{
+		DWHCITransferStageDataSetState (pStageData, StageStateNoSplitTransfer);
+	}
 
 	DWHCIDeviceStartTransaction (pThis, pStageData);
 
@@ -1302,9 +1314,9 @@ boolean DWHCIDeviceWaitForBit (TDWHCIDevice *pThis, TDWHCIRegister *pRegister, u
 
 		if (--nMsTimeout == 0)
 		{
-			LogWrite (FromDWHCI, LOG_WARNING, "Timeout");
+			//LogWrite (FromDWHCI, LOG_WARNING, "Timeout");
 #ifndef NDEBUG
-			DWHCIRegisterDump (pRegister);
+			//DWHCIRegisterDump (pRegister);
 #endif
 			return FALSE;
 		}

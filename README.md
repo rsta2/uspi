@@ -6,7 +6,7 @@ USPi
 Overview
 --------
 
-USPi is a bare metal USB driver for the Raspberry Pi written in C. It was ported from the Circle USB library. Using C allows it to be used from bare metal C code for the Raspberry Pi. Like the Circle USB library it supports control (synchronous), bulk and interrupt (synchronous and asynchronous) transfers. Function drivers are available for USB keyboards, mass storage devices (e.g. USB flash devices) and the on-board Ethernet controller. USPi is only running on the Raspberry Pi model B and B+ at the moment.
+USPi is a bare metal USB driver for the Raspberry Pi written in C. It was ported from the Circle USB library. Using C allows it to be used from bare metal C code for the Raspberry Pi. Like the Circle USB library it supports control (synchronous), bulk and interrupt (synchronous and asynchronous) transfers. Function drivers are available for USB keyboards, mass storage devices (e.g. USB flash devices) and the on-board Ethernet controller. USPi should run on all existing Raspberry Pi models.
 
 USPi was "mechanically" ported from the Circle USB library which is written in C++. That's why the source code may look a little bit strange. But it was faster to do so.
 

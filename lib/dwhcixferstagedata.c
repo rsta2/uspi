@@ -20,6 +20,7 @@
 #include <uspi/dwhcixferstagedata.h>
 #include <uspi/dwhciframeschedper.h>
 #include <uspi/dwhciframeschednper.h>
+#include <uspi/dwhciframeschednsplit.h>
 #include <uspi/dwhci.h>
 #include <uspios.h>
 #include <uspi/assert.h>
@@ -120,6 +121,16 @@ void DWHCITransferStageData (TDWHCITransferStageData *pThis, unsigned nChannel, 
 		}
 
 		assert (pThis->m_pFrameScheduler != 0);
+	}
+	else
+	{
+		if (   USBDeviceGetHubAddress (pThis->m_pDevice) == 0
+		    && pThis->m_Speed != USBSpeedHigh)
+		{
+			pThis->m_pFrameScheduler = (TDWHCIFrameScheduler *) malloc (sizeof (TDWHCIFrameSchedulerNoSplit));
+			DWHCIFrameSchedulerNoSplit ((TDWHCIFrameSchedulerNoSplit *) pThis->m_pFrameScheduler, DWHCITransferStageDataIsPeriodic (pThis));
+			assert (pThis->m_pFrameScheduler != 0);
+		}
 	}
 }
 
@@ -406,7 +417,8 @@ u8 DWHCITransferStageDataGetHubPortAddress (TDWHCITransferStageData *pThis)
 u8 DWHCITransferStageDataGetSplitPosition (TDWHCITransferStageData *pThis)
 {
 	assert (pThis != 0);
-	return DWHCI_HOST_CHAN_SPLIT_CTRL_ALL;		// TODO: may not work in any case
+	assert (pThis->m_nTransferSize <= 188);		// TODO
+	return DWHCI_HOST_CHAN_SPLIT_CTRL_ALL;
 }
 
 u32 DWHCITransferStageDataGetStatusMask (TDWHCITransferStageData *pThis)
@@ -415,7 +427,8 @@ u32 DWHCITransferStageDataGetStatusMask (TDWHCITransferStageData *pThis)
 	u32 nMask =   DWHCI_HOST_CHAN_INT_XFER_COMPLETE
 		    | DWHCI_HOST_CHAN_INT_ERROR_MASK;
 		    
-	if (pThis->m_bSplitTransaction)
+	if (   pThis->m_bSplitTransaction
+	    || DWHCITransferStageDataIsPeriodic (pThis))
 	{
 		nMask |=   DWHCI_HOST_CHAN_INT_ACK
 			 | DWHCI_HOST_CHAN_INT_NAK
