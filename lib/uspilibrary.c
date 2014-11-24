@@ -57,6 +57,8 @@ int USPiInitialize (void)
 
 	s_pLibrary->pEth0 = (TSMSC951xDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "eth0", FALSE);
 
+    s_pLibrary->pUPAD1 = (TUSBGamePadDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "upad1", FALSE);
+
 	LogWrite (FromUSPi, LOG_DEBUG, "USPi library successfully initialized");
 
 	return 1;
@@ -162,4 +164,24 @@ int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength)
 	assert (s_pLibrary != 0);
 	assert (s_pLibrary->pEth0 != 0);
 	return SMSC951xDeviceReceiveFrame (s_pLibrary->pEth0, pBuffer, pResultLength) ? 1 : 0;
+}
+int USPiGamePadAvailable (void)
+{
+    assert (s_pLibrary != 0);
+    return s_pLibrary->pUPAD1 != 0;
+}
+
+void USPiGamePadRegisterStatusHandler (TGamePadStatusHandler *pStatusHandler)
+{
+    assert (s_pLibrary != 0);
+    assert (s_pLibrary->pUPAD1 != 0);
+    USBGamePadDeviceRegisterStatusHandler (s_pLibrary->pUPAD1, pStatusHandler);
+}
+
+const USPiGamePadState *USPiGamePadGetStatus (void)
+{
+    assert (s_pLibrary != 0);
+    assert (s_pLibrary->pUPAD1 != 0);
+    USBGamePadDeviceGetReport (s_pLibrary->pUPAD1);
+    return &s_pLibrary->pUPAD1->m_State;
 }

@@ -23,7 +23,11 @@
 #include <uspi/macros.h>
 
 // Class-specific requests
-#define SET_REPORT		0x09
+#define GET_REPORT          0x01
+#define GET_IDLE            0x02
+#define GET_PROTOCOL        0x03
+#define SET_REPORT		    0x09
+#define SET_IDLE            0x0A
 #define SET_PROTOCOL		0x0B
 
 // Class-specific descriptors
@@ -37,6 +41,7 @@
 // Report types
 #define REPORT_TYPE_INPUT	0x01
 #define REPORT_TYPE_OUTPUT	0x02
+#define REPORT_TYPE_FEATURE 0x03
 
 typedef struct TUSBHIDDescriptor
 {

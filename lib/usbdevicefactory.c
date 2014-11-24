@@ -26,6 +26,7 @@
 #include <uspi/usbmassdevice.h>
 #include <uspi/usbkeyboard.h>
 #include <uspi/usbmouse.h>
+#include <uspi/usbgamepad.h>
 #include <uspi/smsc951x.h>
 
 TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName);
@@ -89,6 +90,13 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		SMSC951xDevice (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
+    else if (StringCompare (pName, "int3-0-0") == 0)
+    {
+        TUSBGamePadDevice *pDevice = (TUSBGamePadDevice *) malloc (sizeof (TUSBGamePadDevice));
+        assert (pDevice != 0);
+        USBGamePadDevice (pDevice, pParent);
+        pResult = (TUSBDevice *) pDevice;
+    }
 	// new devices follow
 
 	if (pResult != 0)
