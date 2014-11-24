@@ -25,6 +25,10 @@ typedef unsigned short		u16;
 typedef unsigned int		u32;
 typedef unsigned long long	u64;
 
+typedef char                s8;
+typedef short               s16;
+typedef int                 s32;
+
 typedef int		boolean;
 #define FALSE		0
 #define TRUE		1

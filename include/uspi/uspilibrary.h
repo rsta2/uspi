@@ -24,6 +24,7 @@
 #include <uspi/dwhcidevice.h>
 #include <uspi/usbkeyboard.h>
 #include <uspi/usbmouse.h>
+#include <uspi/usbgamepad.h>
 #include <uspi/usbmassdevice.h>
 #include <uspi/smsc951x.h>
 
@@ -39,6 +40,7 @@ typedef struct TUSPiLibrary
 	TUSBMouseDevice			*pUMouse1;
 	TUSBBulkOnlyMassStorageDevice	*pUMSD1;
 	TSMSC951xDevice			*pEth0;
+    TUSBGamePadDevice       *pUPAD1;
 }
 TUSPiLibrary;
 
