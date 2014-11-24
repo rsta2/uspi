@@ -641,13 +641,13 @@ void DWHCIDeviceEnableChannelInterrupt (TDWHCIDevice *pThis, unsigned nChannel)
 	TDWHCIRegister AllChanInterruptMask;
 	DWHCIRegister (&AllChanInterruptMask, DWHCI_HOST_ALLCHAN_INT_MASK);
 
-	EnterCritical ();
+	uspi_EnterCritical ();
 
 	DWHCIRegisterRead (&AllChanInterruptMask);
 	DWHCIRegisterOr (&AllChanInterruptMask, 1 << nChannel);
 	DWHCIRegisterWrite (&AllChanInterruptMask);
 
-	LeaveCritical ();
+	uspi_LeaveCritical ();
 
 	_DWHCIRegister (&AllChanInterruptMask);
 }
@@ -659,13 +659,13 @@ void DWHCIDeviceDisableChannelInterrupt (TDWHCIDevice *pThis, unsigned nChannel)
 	TDWHCIRegister AllChanInterruptMask;
 	DWHCIRegister (&AllChanInterruptMask, DWHCI_HOST_ALLCHAN_INT_MASK);
 
-	EnterCritical ();
+	uspi_EnterCritical ();
 
 	DWHCIRegisterRead (&AllChanInterruptMask);
 	DWHCIRegisterAnd (&AllChanInterruptMask, ~(1 << nChannel));
 	DWHCIRegisterWrite (&AllChanInterruptMask);
 
-	LeaveCritical ();
+	uspi_LeaveCritical ();
 	
 	_DWHCIRegister (&AllChanInterruptMask);
 }
@@ -1263,7 +1263,7 @@ unsigned DWHCIDeviceAllocateChannel (TDWHCIDevice *pThis)
 {
 	assert (pThis != 0);
 
-	EnterCritical ();
+	uspi_EnterCritical ();
 
 	unsigned nChannelMask = 1;
 	for (unsigned nChannel = 0; nChannel < pThis->m_nChannels; nChannel++)
@@ -1272,7 +1272,7 @@ unsigned DWHCIDeviceAllocateChannel (TDWHCIDevice *pThis)
 		{
 			pThis->m_nChannelAllocated |= nChannelMask;
 
-			LeaveCritical ();
+			uspi_LeaveCritical ();
 			
 			return nChannel;
 		}
@@ -1280,7 +1280,7 @@ unsigned DWHCIDeviceAllocateChannel (TDWHCIDevice *pThis)
 		nChannelMask <<= 1;
 	}
 	
-	LeaveCritical ();
+	uspi_LeaveCritical ();
 	
 	return DWHCI_MAX_CHANNELS;
 }
@@ -1292,12 +1292,12 @@ void DWHCIDeviceFreeChannel (TDWHCIDevice *pThis, unsigned nChannel)
 	assert (nChannel < pThis->m_nChannels);
 	unsigned nChannelMask = 1 << nChannel; 
 	
-	EnterCritical ();
+	uspi_EnterCritical ();
 	
 	assert (pThis->m_nChannelAllocated & nChannelMask);
 	pThis->m_nChannelAllocated &= ~nChannelMask;
 	
-	LeaveCritical ();
+	uspi_LeaveCritical ();
 }
 
 boolean DWHCIDeviceWaitForBit (TDWHCIDevice *pThis, TDWHCIRegister *pRegister, u32 nMask, boolean bWaitUntilSet, unsigned nMsTimeout)

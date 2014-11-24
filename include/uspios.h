@@ -36,8 +36,8 @@ extern "C" {
 #define HZ	100			// timer ticks / second
 
 // Default keyboard map (enable only one)
-//#define USPI_DEFAULT_KEYMAP_UK
-#define USPI_DEFAULT_KEYMAP_DE
+#define USPI_DEFAULT_KEYMAP_UK
+//#define USPI_DEFAULT_KEYMAP_DE
 
 // Undefine this if you want to use your own implementation of the functions in uspi/util.h
 #define USPI_PROVIDE_MEM_FUNCTIONS	// mem*()
@@ -50,12 +50,6 @@ extern "C" {
 //
 void *malloc (unsigned nSize);		// result must be 4-byte aligned
 void free (void *pBlock);
-
-//
-// Interrupt synchronization
-//
-void EnterCritical (void);		// disable interrupts (nested calls possible)
-void LeaveCritical (void);		// enable interrupts (nested calls possible)
 
 //
 // Timer
@@ -85,9 +79,6 @@ void ConnectInterrupt (unsigned nIRQ, TInterruptHandler *pHandler, void *pParam)
 //
 // See: https://github.com/raspberrypi/firmware/wiki/Mailboxes
 //
-
-// returns board revision or < 0 on failure
-int GetBoardRevision (void);			// "get board revision"
 
 // returns 0 on failure
 int SetPowerStateOn (unsigned nDeviceId);	// "set power state" to "on", wait until completed
