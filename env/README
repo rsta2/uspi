@@ -1,0 +1,3 @@
+README
+
+This directory contains a sample environment to get USPi running. It provides all required functions in a library which can be linked to a program using USPi. Currently this environment does not use the MMU.

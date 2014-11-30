@@ -1,6 +1,10 @@
 #
 # Rules.mk
 #
+# The C build process was initially taken
+#	from the "collection of low level examples"
+# 	which is Copyright (c) 2012 David Welch dwelch@dwelch.com
+#
 # USPi - An USB driver for Raspberry Pi written in C
 # Copyright (C) 2014  R. Stange <rsta2@o2online.de>
 # 
@@ -19,26 +23,15 @@
 #
 
 ifeq ($(strip $(USPIHOME)),)
-USPIHOME = ..
+USPIHOME = ../..
 endif
 
--include $(USPIHOME)/Config.mk
+CFLAGS	+= -I $(USPIHOME)/env/include
 
-PREFIX	?= arm-rpi-linux-gnueabi-
+kernel.img: $(OBJS) $(LIBS)
+	$(LD) -o kernel.elf -Map kernel.map -T $(USPIHOME)/env/uspienv.ld $(USPIHOME)/env/lib/startup.o $(OBJS) $(LIBS)
+	$(PREFIX)objdump -D kernel.elf > kernel.lst
+	$(PREFIX)objcopy kernel.elf -O binary kernel.img
+	wc -c kernel.img
 
-CC	= $(PREFIX)gcc
-AS	= $(CC)
-LD	= $(PREFIX)ld
-AR	= $(PREFIX)ar
-
-CFLAGS	+= -march=armv6 -mtune=arm1176jzf-s -Wall -Wno-psabi -fno-builtin -nostdinc -nostdlib \
-	   -std=gnu99 -undef -I $(USPIHOME)/include -O #-DNDEBUG
-
-%.o: %.S
-	$(AS) $(AFLAGS) -c -o $@ $<
-
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-clean:
-	rm -f *.o *.a *.elf *.lst *.img *.cir *.map *~ $(EXTRACLEAN)
+include $(USPIHOME)/Rules.mk

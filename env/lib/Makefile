@@ -1,7 +1,7 @@
 #
-# Rules.mk
+# Makefile
 #
-# USPi - An USB driver for Raspberry Pi written in C
+# Circle - A C++ bare metal environment for Raspberry Pi
 # Copyright (C) 2014  R. Stange <rsta2@o2online.de>
 # 
 # This program is free software: you can redistribute it and/or modify
@@ -18,27 +18,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-ifeq ($(strip $(USPIHOME)),)
-USPIHOME = ..
-endif
+USPIHOME = ../..
 
--include $(USPIHOME)/Config.mk
+AFLAGS	+= -I ../include
+CFLAGS	+= -I ../include
 
-PREFIX	?= arm-rpi-linux-gnueabi-
+OBJS	= alloc.o assert.o bcmmailbox.o bcmframebuffer.o bcmpropertytags.o chargenerator.o debug.o \
+	  delayloop.o exceptionstub.o interrupt.o libhelper.o libstub.o logger.o memio.o screen.o \
+	  string.o synchronize.o sysinit.o timer.o uspibind.o uspienv.o util.o util_fast.o
 
-CC	= $(PREFIX)gcc
-AS	= $(CC)
-LD	= $(PREFIX)ld
-AR	= $(PREFIX)ar
+all: startup.o libuspienv.a
 
-CFLAGS	+= -march=armv6 -mtune=arm1176jzf-s -Wall -Wno-psabi -fno-builtin -nostdinc -nostdlib \
-	   -std=gnu99 -undef -I $(USPIHOME)/include -O #-DNDEBUG
+startup.o: startup.S
 
-%.o: %.S
-	$(AS) $(AFLAGS) -c -o $@ $<
+libuspienv.a: $(OBJS)
+	rm -f $@
+	$(AR) cr $@ $(OBJS)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-clean:
-	rm -f *.o *.a *.elf *.lst *.img *.cir *.map *~ $(EXTRACLEAN)
+include $(USPIHOME)/Rules.mk

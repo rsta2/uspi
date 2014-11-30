@@ -33,7 +33,7 @@ extern "C" {
 //
 #define GPU_L2_CACHE_ENABLED		// normally enabled (can be disabled in config.txt)
 
-#define HZ	100			// timer ticks / second
+#define HZ	100			// timer ticks / second (set this to your timer interrupt frequency)
 
 // Default keyboard map (enable only one)
 #define USPI_DEFAULT_KEYMAP_UK
