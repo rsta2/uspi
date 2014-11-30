@@ -1,7 +1,7 @@
 #!/bin/sh
 
 for sample in * ;  do
-	if [[ -d $sample ]] ; then
+	if test -d $sample ; then
 		echo $sample:
 		cd $sample
 		make $1 $2 || exit
