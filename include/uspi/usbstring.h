@@ -1,5 +1,5 @@
 //
-// uspilibrary.h
+// usbstring.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
@@ -17,34 +17,36 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspi_uspilibrary_h
-#define _uspi_uspilibrary_h
+#ifndef _uspi_usbstring_h
+#define _uspi_usbstring_h
 
-#include <uspi/devicenameservice.h>
-#include <uspi/dwhcidevice.h>
-#include <uspi/usbkeyboard.h>
-#include <uspi/usbmouse.h>
-#include <uspi/usbgamepad.h>
-#include <uspi/usbmassdevice.h>
-#include <uspi/smsc951x.h>
+#include <uspi/usb.h>
+#include <uspi/string.h>
+#include <uspi/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define MAX_DEVICES	4
+struct TUSBDevice;
 
-typedef struct TUSPiLibrary
+typedef struct TUSBString
 {
-	TDeviceNameService		 NameService;
-	TDWHCIDevice			 DWHCI;
-	TUSBKeyboardDevice		*pUKBD1;
-	TUSBMouseDevice			*pUMouse1;
-	TUSBBulkOnlyMassStorageDevice	*pUMSD[MAX_DEVICES];
-	TSMSC951xDevice			*pEth0;
-	TUSBGamePadDevice       	*pUPAD[MAX_DEVICES];
+	struct TUSBDevice *m_pDevice;
+
+	TUSBStringDescriptor *m_pUSBString;
+
+	TString *m_pString;
 }
-TUSPiLibrary;
+TUSBString;
+
+void USBString (TUSBString *pThis, struct TUSBDevice *pDevice);
+void USBStringCopy (TUSBString *pThis, TUSBString *pParent);
+void _USBString (TUSBString *pThis);
+
+boolean USBStringGetFromDescriptor (TUSBString *pThis, u8 ucID);
+
+const char *USBStringGet (TUSBString *pThis);
 
 #ifdef __cplusplus
 }

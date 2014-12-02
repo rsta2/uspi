@@ -50,6 +50,7 @@ typedef struct TUSBGamePadDevice
 
 	TUSBRequest *m_pURB;
 	u8 *m_pReportBuffer;
+	u16 m_nReportSize;
 }
 TUSBGamePadDevice;
 

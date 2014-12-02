@@ -49,18 +49,20 @@
 #define HID_USAGE_PAGE_BUTTONS         0x09
 
 // HID Report Usages from HID Usage Tables 1.12 Section 4, Table 6
-#define HID_USAGE_POINTER  0x01
-#define HID_USAGE_MOUSE    0x02
-#define HID_USAGE_JOYSTICK 0x04
-#define HID_USAGE_GAMEPAD  0x05
-#define HID_USAGE_KEYBOARD 0x06
-#define HID_USAGE_X        0x30
-#define HID_USAGE_Y        0x31
-#define HID_USAGE_Z        0x32
-#define HID_USAGE_RX       0x33
-#define HID_USAGE_RY       0x34
-#define HID_USAGE_RZ       0x35
-#define HID_USAGE_WHEEL    0x38
+#define HID_USAGE_POINTER   0x01
+#define HID_USAGE_MOUSE     0x02
+#define HID_USAGE_JOYSTICK  0x04
+#define HID_USAGE_GAMEPAD   0x05
+#define HID_USAGE_KEYBOARD  0x06
+#define HID_USAGE_X         0x30
+#define HID_USAGE_Y         0x31
+#define HID_USAGE_Z         0x32
+#define HID_USAGE_RX        0x33
+#define HID_USAGE_RY        0x34
+#define HID_USAGE_RZ        0x35
+#define HID_USAGE_SLIDER    0x36
+#define HID_USAGE_WHEEL     0x38
+#define HID_USAGE_HATSWITCH 0x39
 
 // HID Report Collection Types from HID 1.12 6.2.2.6
 #define HID_COLLECTION_PHYSICAL    0
@@ -97,9 +99,16 @@ void USBGamePadDevice (TUSBGamePadDevice *pThis, TUSBDevice *pDevice)
     pThis->m_State.idProduct = pDevice->m_pDeviceDesc->idProduct;
     pThis->m_State.idVersion = pDevice->m_pDeviceDesc->bcdDevice;
 
-    pThis->m_State.x = pThis->m_State.y = pThis->m_State.z = 0;
-    pThis->m_State.rx = pThis->m_State.ry = pThis->m_State.rz = 0;
-    pThis->m_State.maximum = pThis->m_State.minimum = 0;
+    pThis->m_State.naxes = 0;
+    for (int i = 0; i < MAX_AXIS; i++) {
+        pThis->m_State.axes[i].value = 0;
+        pThis->m_State.axes[i].minimum = 0;
+        pThis->m_State.axes[i].maximum = 0;
+    }
+
+    pThis->m_State.nhats = 0;
+    for (int i = 0; i < MAX_HATS; i++)
+        pThis->m_State.hats[i] = 0;
 
     pThis->m_State.nbuttons = 0;
     pThis->m_State.buttons = 0;
@@ -183,18 +192,23 @@ enum {
     GamePad,
     GamePadButton,
     GamePadAxis,
+    GamePadHat,
 };
+
+#define UNDEFINED   -123456789
 
 static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
 {
     s32 item, arg;
     u32 offset = 0, size = 0, count = 0;
-    s32 index = 0, map[MAX_AXIS] = { -1, -1, -1, -1, -1, -1 }, max = 0, min = 0;
+    s32 lmax = UNDEFINED, lmin = UNDEFINED, pmin = UNDEFINED, pmax = UNDEFINED;
+    s32 naxes = 0, nhats = 0, reportsize = 0;
     u32 state = None;
 
     u8 *pReportBuffer = pThis->m_pReportBuffer;
     s8 *pHIDReportDescriptor = (s8 *)pThis->m_pHIDReportDescriptor;
     u16 wReportDescriptorLength = pThis->m_usReportDescriptorLength;
+    USPiGamePadState *pState = &pThis->m_State;
 
     while (wReportDescriptorLength > 0) {
         item = *pHIDReportDescriptor++;
@@ -225,7 +239,7 @@ static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
         if ((item & 0xFC) == HID_REPORT_ID) {
             if (BitGetUnsigned(pReportBuffer, 0, 8) != arg)
                 break;
-            offset += 8;
+            offset = 8;
         }
 
         switch(item & 0xFC) {
@@ -249,19 +263,27 @@ static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
                     case HID_USAGE_RX:
                     case HID_USAGE_RY:
                     case HID_USAGE_RZ:
-                        map[index++] = arg;
+                    case HID_USAGE_SLIDER:
                         if (state == GamePad)
                             state = GamePadAxis;
+                        break;
+                    case HID_USAGE_HATSWITCH:
+                        if (state == GamePad)
+                            state = GamePadHat;
                         break;
                 }
                 break;
             case HID_LOGICAL_MIN:
+                lmin = arg;
+                break;
             case HID_PHYSICAL_MIN:
-                min = arg;
+                pmin = arg;
                 break;
             case HID_LOGICAL_MAX:
+                lmax = arg;
+                break;
             case HID_PHYSICAL_MAX:
-                max = arg;
+                pmax = arg;
                 break;
             case HID_REPORT_SIZE: // REPORT_SIZE
                 size = arg;
@@ -270,59 +292,46 @@ static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
                 count = arg;
                 break;
             case HID_INPUT:
-                switch(arg) {
-                    case 0x02: // INPUT(Data,Var,Abs)
-                        if (state == GamePadAxis) {
-                            pThis->m_State.minimum = min;
-                            pThis->m_State.maximum = max;
+                if ((arg & 0x03) == 0x02) {  // INPUT(Data,Var)
+                    if (state == GamePadAxis) {
+                        for (int i = 0; i < count && i < MAX_AXIS; i++) {
+                            pState->axes[naxes].minimum = lmin != UNDEFINED ? lmin : pmin;
+                            pState->axes[naxes].maximum = lmax != UNDEFINED ? lmax : pmax;
 
-                            for (int i = 0; i < count && i < MAX_AXIS; i++) {
-                                int value = (min < 0) ? BitGetSigned(pReportBuffer, offset + i * size, size) :
-                                                        BitGetUnsigned(pReportBuffer, offset + i * size, size);
+                            int value = (pState->axes[naxes].minimum < 0) ?
+                                    BitGetSigned(pReportBuffer, offset + i * size, size) :
+                                    BitGetUnsigned(pReportBuffer, offset + i * size, size);
 
-                                switch(map[i]) {
-                                    case HID_USAGE_X:
-                                        pThis->m_State.x = value;
-                                        pThis->m_State.flags |= FLAG_X;
-                                        break;
-                                    case HID_USAGE_Y:
-                                        pThis->m_State.y = value;
-                                        pThis->m_State.flags |= FLAG_Y;
-                                        break;
-                                    case HID_USAGE_Z:
-                                        pThis->m_State.z = value;
-                                        pThis->m_State.flags |= FLAG_Z;
-                                        break;
-                                    case HID_USAGE_RX:
-                                        pThis->m_State.rx = value;
-                                        pThis->m_State.flags |= FLAG_RX;
-                                        break;
-                                    case HID_USAGE_RY:
-                                        pThis->m_State.ry = value;
-                                        pThis->m_State.flags |= FLAG_RY;
-                                        break;
-                                    case HID_USAGE_RZ:
-                                        pThis->m_State.rz = value;
-                                        pThis->m_State.flags |= FLAG_RZ;
-                                        break;
-                                }
-                            }
-
-                            state = GamePad;
+                            pState->axes[naxes++].value = value;
                         }
-                        else if (state == GamePadButton) {
-                            pThis->m_State.nbuttons = count;
-                            pThis->m_State.buttons = BitGetUnsigned(pReportBuffer, offset, size * count);
-                            state = GamePad;
+
+                        state = GamePad;
+                    }
+                    else if (state == GamePadHat) {
+                        for (int i = 0; i < count && i < MAX_HATS; i++) {
+                            int value = BitGetUnsigned(pReportBuffer, offset + i * size, size);
+                            pState->hats[nhats++] = value;
                         }
-                        break;
+                        state = GamePad;
+                    }
+                    else if (state == GamePadButton) {
+                        pState->nbuttons = count;
+                        pState->buttons = BitGetUnsigned(pReportBuffer, offset, size * count);
+                        state = GamePad;
+                    }
                 }
                 offset += count * size;
+                reportsize += count * size;
                 break;
             case HID_OUTPUT:
                 break;
         }
     }
+
+    pState->naxes = naxes;
+    pState->nhats = nhats;
+
+    pThis->m_nReportSize = (reportsize + 7) / 8;
 }
 
 boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
@@ -429,6 +438,8 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
         return FALSE;
     }
 
+    USBGamePadDeviceGetReport (pThis);
+
 	TString DeviceName;
 	String (&DeviceName);
 	StringFormat (&DeviceName, "upad%u", s_nDeviceNumber++);
@@ -456,7 +467,7 @@ boolean USBGamePadDeviceStartRequest (TUSBGamePadDevice *pThis)
 	assert (pThis->m_pURB == 0);
 	pThis->m_pURB = malloc (sizeof (TUSBRequest));
 	assert (pThis->m_pURB != 0);
-	USBRequest (pThis->m_pURB, pThis->m_pEndpointIn, pThis->m_pReportBuffer, 8, 0);
+	USBRequest (pThis->m_pURB, pThis->m_pEndpointIn, pThis->m_pReportBuffer, pThis->m_nReportSize, 0);
 	USBRequestSetCompletionRoutine (pThis->m_pURB, USBGamePadDeviceCompletionRoutine, 0, pThis);
 
 	return DWHCIDeviceSubmitAsyncRequest (USBDeviceGetHost (&pThis->m_USBDevice), pThis->m_pURB);

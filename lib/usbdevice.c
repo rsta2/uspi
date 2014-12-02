@@ -63,6 +63,9 @@ void USBDevice (TUSBDevice *pThis, struct TDWHCIDevice *pHost, TUSBSpeed Speed, 
 	USBEndpoint (pThis->m_pEndpoint0, pThis);
 	
 	assert (ucHubPortNumber >= 1);
+
+	USBString (&pThis->m_ManufacturerString, pThis);
+	USBString (&pThis->m_ProductString, pThis);
 }
 
 void USBDeviceCopy (TUSBDevice *pThis, TUSBDevice *pDevice)
@@ -83,6 +86,9 @@ void USBDeviceCopy (TUSBDevice *pThis, TUSBDevice *pDevice)
 	pThis->m_Speed		 = pDevice->m_Speed;
 	pThis->m_ucHubAddress	 = pDevice->m_ucHubAddress;
 	pThis->m_ucHubPortNumber = pDevice->m_ucHubPortNumber;
+
+	USBStringCopy (&pThis->m_ManufacturerString, &pDevice->m_ManufacturerString);
+	USBStringCopy (&pThis->m_ProductString, &pDevice->m_ProductString);
 	
 	pThis->m_pEndpoint0 = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
 	assert (pThis->m_pEndpoint0 != 0);
@@ -148,6 +154,9 @@ void _USBDevice (TUSBDevice *pThis)
 	pThis->Configure = 0;
 	
 	pThis->m_pHost = 0;
+
+	_USBString (&pThis->m_ProductString);
+	_USBString (&pThis->m_ManufacturerString);
 }
 
 boolean USBDeviceInitialize (TUSBDevice *pThis)
@@ -222,6 +231,16 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 	}
 	
 	USBDeviceSetAddress (pThis, ucAddress);
+
+	if (pThis->m_pDeviceDesc->iManufacturer != 0)
+	{
+		USBStringGetFromDescriptor (&pThis->m_ManufacturerString, pThis->m_pDeviceDesc->iManufacturer);
+	}
+
+	if (pThis->m_pDeviceDesc->iProduct != 0)
+	{
+		USBStringGetFromDescriptor (&pThis->m_ProductString, pThis->m_pDeviceDesc->iProduct);
+	}
 
 	assert (pThis->m_pConfigDesc == 0);
 	pThis->m_pConfigDesc = (TUSBConfigurationDescriptor *) malloc (sizeof (TUSBConfigurationDescriptor));

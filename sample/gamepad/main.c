@@ -4,16 +4,46 @@
 #include <uspienv.h>
 #include <uspi.h>
 #include <uspios.h>
+#include <uspienv/string.h>
 #include <uspienv/assert.h>
 
 static const char FromSample[] = "sample";
 
 static void GamePadStatusHandler (const USPiGamePadState *pState)
 {
-	LogWrite (FromSample, LogNotice, "buttons 0x%X x %d y %d z %d rx %d ry %d rz %d",
-		  pState->buttons,
-		  pState->x, pState->y, pState->z,
-		  pState->rx, pState->ry, pState->rz);
+	TString Msg;
+	String (&Msg);
+	StringFormat (&Msg, "GamePad: Buttons 0x%X", pState->buttons);
+
+	TString Value;
+	String (&Value);
+
+	if (pState->naxes > 0)
+	{
+		StringAppend (&Msg, " Axes");
+
+		for (unsigned i = 0; i < pState->naxes; i++)
+		{
+			StringFormat (&Value, " %d", pState->axes[i].value);
+			StringAppend (&Msg, StringGet (&Value));
+		}
+	}
+
+	if (pState->nhats > 0)
+	{
+		StringAppend (&Msg, " Hats");
+
+		for (unsigned i = 0; i < pState->nhats; i++)
+		{
+			StringFormat (&Value, " %d", pState->hats[i]);
+			StringAppend (&Msg, StringGet (&Value));
+		}
+	}
+
+	LogWrite (FromSample, LOG_NOTICE, StringGet (&Msg));
+	
+	_String (&Value);
+	_String (&Msg);
 }
 
 int main (void)
@@ -31,26 +61,47 @@ int main (void)
 
 		return EXIT_HALT;
 	}
-	
-	if (!USPiGamePadAvailable ())
+
+	int nGamePads = USPiGamePadAvailable ();
+	if (nGamePads < 1)
 	{
-		LogWrite (FromSample, LOG_ERROR, "Gamepad not found");
+		LogWrite (FromSample, LOG_ERROR, "GamePad not found");
 
 		USPiEnvClose ();
 
 		return EXIT_HALT;
 	}
 
-	const USPiGamePadState *pState = USPiGamePadGetStatus ();
-	assert (pState != 0);
+	for (unsigned nGamePad = 0; nGamePad < (unsigned) nGamePads; nGamePad++)
+	{
+		TUSPiDeviceInformation Info;
+		if (!USPiDeviceGetInformation (GAMEPAD_CLASS, nGamePad, &Info))
+		{
+			LogWrite (FromSample, LOG_ERROR, "Cannot get device information");
 
-	LogWrite (FromSample, LogNotice, "Gamepad: Vendor 0x%X Product 0x%X Version 0x%X",
-		  (unsigned) pState->idVendor, (unsigned) pState->idProduct, (unsigned) pState->idVersion);
+			USPiEnvClose ();
 
-	LogWrite (FromSample, LogNotice, "Buttons: Count %d", pState->nbuttons);
+			return EXIT_HALT;
+		}
 
-	LogWrite (FromSample, LogNotice, "Axis: Flags 0x%X Minimum %d Maximum %d",
-		  pState->flags, pState->minimum, pState->maximum);
+		LogWrite (FromSample, LOG_NOTICE, "GamePad %u: Vendor 0x%X Product 0x%X Version 0x%X",
+			  nGamePad+1, (unsigned) Info.idVendor, (unsigned) Info.idProduct, (unsigned) Info.bcdDevice);
+
+		LogWrite (FromSample, LOG_NOTICE, "GamePad %u: Manufacturer \"%s\" Product \"%s\"",
+			  nGamePad+1, Info.pManufacturer, Info.pProduct);
+
+		const USPiGamePadState *pState = USPiGamePadGetStatus (nGamePad);
+		assert (pState != 0);
+
+		LogWrite (FromSample, LOG_NOTICE, "GamePad %u: %d Buttons %d Hats",
+			  nGamePad+1, pState->nbuttons, pState->nhats);
+
+		for (int i = 0; i < pState->naxes; i++)
+		{
+			LogWrite (FromSample, LOG_NOTICE, "GamePad %u: Axis %d: Minimum %d Maximum %d",
+				  nGamePad+1, i+1, pState->axes[i].minimum, pState->axes[i].maximum);
+		}
+	}
 
 	USPiGamePadRegisterStatusHandler (GamePadStatusHandler);
 

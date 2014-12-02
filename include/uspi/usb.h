@@ -166,4 +166,12 @@ typedef union
 }
 PACKED TUSBDescriptor;
 
+typedef struct TUSBStringDescriptor
+{
+	unsigned char	bLength;
+	unsigned char	bDescriptorType;
+	unsigned short	bString[0];
+}
+PACKED TUSBStringDescriptor;
+
 #endif

@@ -5,7 +5,7 @@
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014  R. Stange <rsta2@o2online.de>
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -96,18 +96,20 @@ void USPiMouseRegisterStatusHandler (TUSPiMouseStatusHandler *pStatusHandler);
 // Mass storage device
 //
 
-// returns != 0 if available
+// returns number of available devices
 int USPiMassStorageDeviceAvailable (void);
 
 #define USPI_BLOCK_SIZE		512			// other block sizes are not supported
 
 // ullOffset and nCount must be multiple of USPI_BLOCK_SIZE
 // returns number of read bytes or < 0 on failure
-int USPiMassStorageDeviceRead (unsigned long long ullOffset, void *pBuffer, unsigned nCount);
+// nDeviceIndex is 0-based
+int USPiMassStorageDeviceRead (unsigned long long ullOffset, void *pBuffer, unsigned nCount, unsigned nDeviceIndex);
 
 // ullOffset and nCount must be multiple of USPI_BLOCK_SIZE
 // returns number of written bytes or < 0 on failure
-int USPiMassStorageDeviceWrite (unsigned long long ullOffset, const void *pBuffer, unsigned nCount);
+// nDeviceIndex is 0-based
+int USPiMassStorageDeviceWrite (unsigned long long ullOffset, const void *pBuffer, unsigned nCount, unsigned nDeviceIndex);
 
 //
 // Ethernet services
@@ -133,43 +135,65 @@ int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength);
 // GamePad device
 //
 
-// returns != 0 if available
+// returns number of available devices
 int USPiGamePadAvailable (void);
 
 #define MAX_AXIS    6
-
-#define FLAG_X      0x0001
-#define FLAG_Y      0x0002
-#define FLAG_Z      0x0004
-#define FLAG_RX     0x0008
-#define FLAG_RY     0x0010
-#define FLAG_RZ     0x0020
+#define MAX_HATS    6
 
 typedef struct USPiGamePadState {
     unsigned short idVendor;
     unsigned short idProduct;
     unsigned short idVersion;
 
-    unsigned int flags;
+    int naxes;
+    struct {
+        int value;
+        int minimum;
+        int maximum;
+    } axes[MAX_AXIS];
 
-    int x;
-    int y;
-    int z;
-    int rx;
-    int ry;
-    int rz;
-    int minimum;
-    int maximum;
+    int nhats;
+    int hats[MAX_HATS];
 
     int nbuttons;
     unsigned int buttons;
 }
 USPiGamePadState;
 
-const USPiGamePadState *USPiGamePadGetStatus (void);
+// returns 0 on failure
+const USPiGamePadState *USPiGamePadGetStatus (unsigned nDeviceIndex);		// nDeviceIndex is 0-based
 
 typedef void TGamePadStatusHandler (const USPiGamePadState *pGamePadState);
 void USPiGamePadRegisterStatusHandler (TGamePadStatusHandler *pStatusHandler);
+
+//
+// USB device information
+//
+
+#define KEYBOARD_CLASS	1
+#define MOUSE_CLASS	2
+#define STORAGE_CLASS	3
+#define ETHERNET_CLASS	4
+#define GAMEPAD_CLASS	5
+
+typedef struct TUSPiDeviceInformation
+{
+	// from USB device descriptor
+	unsigned short	idVendor;
+	unsigned short	idProduct;
+	unsigned short	bcdDevice;
+
+	// points to a buffer in the USPi library, empty string if not available
+	const char	*pManufacturer;
+	const char	*pProduct;
+}
+TUSPiDeviceInformation;
+
+// returns 0 on failure
+int USPiDeviceGetInformation (unsigned nClass,			// see above
+			      unsigned nDeviceIndex,		// 0-based index
+			      TUSPiDeviceInformation *pInfo);	// provided buffer is filled
 
 #ifdef __cplusplus
 }

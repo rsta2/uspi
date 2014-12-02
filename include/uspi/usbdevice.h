@@ -22,6 +22,7 @@
 
 #include <uspi/usb.h>
 #include <uspi/usbconfigparser.h>
+#include <uspi/usbstring.h>
 #include <uspi/string.h>
 #include <uspi/types.h>
 
@@ -58,6 +59,9 @@ typedef struct TUSBDevice
 	TUSBConfigurationDescriptor *m_pConfigDesc;
 
 	TUSBConfigurationParser *m_pConfigParser;
+
+	TUSBString m_ManufacturerString;
+	TUSBString m_ProductString;
 }
 TUSBDevice;
 
