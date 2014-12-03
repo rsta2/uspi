@@ -31,7 +31,7 @@ AS	= $(CC)
 LD	= $(PREFIX)ld
 AR	= $(PREFIX)ar
 
-CFLAGS	+= -march=armv6 -mtune=arm1176jzf-s -Wall -Wno-psabi -fno-builtin -nostdinc -nostdlib \
+CFLAGS	+= -march=armv6 -mtune=arm1176jzf-s -Wall -Wno-psabi -fsigned-char -fno-builtin -nostdinc -nostdlib \
 	   -std=gnu99 -undef -I $(USPIHOME)/include -O #-DNDEBUG
 
 %.o: %.S
