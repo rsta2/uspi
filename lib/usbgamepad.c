@@ -79,6 +79,7 @@ static const char FromUSBPad[] = "usbpad";
 
 static boolean USBGamePadDeviceStartRequest (TUSBGamePadDevice *pThis);
 static void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext);
+static void USBGamePadDevicePS3Configure (TUSBGamePadDevice *pThis);
 
 void USBGamePadDevice (TUSBGamePadDevice *pThis, TUSBDevice *pDevice)
 {
@@ -91,13 +92,9 @@ void USBGamePadDevice (TUSBGamePadDevice *pThis, TUSBDevice *pDevice)
     pThis->m_pEndpointOut = 0;
     pThis->m_pStatusHandler = 0;
 	pThis->m_pURB = 0;
-	pThis->m_pReportBuffer = 0;
 	pThis->m_pHIDReportDescriptor = 0;
 	pThis->m_usReportDescriptorLength = 0;
-
-	pThis->m_State.idVendor = pDevice->m_pDeviceDesc->idVendor;
-    pThis->m_State.idProduct = pDevice->m_pDeviceDesc->idProduct;
-    pThis->m_State.idVersion = pDevice->m_pDeviceDesc->bcdDevice;
+    pThis->m_nReportSize = 0;
 
     pThis->m_State.naxes = 0;
     for (int i = 0; i < MAX_AXIS; i++) {
@@ -202,8 +199,8 @@ static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
     s32 item, arg;
     u32 offset = 0, size = 0, count = 0;
     s32 lmax = UNDEFINED, lmin = UNDEFINED, pmin = UNDEFINED, pmax = UNDEFINED;
-    s32 naxes = 0, nhats = 0, reportsize = 0;
-    u32 state = None;
+    s32 naxes = 0, nhats = 0;
+    u32 id = 0, state = None;
 
     u8 *pReportBuffer = pThis->m_pReportBuffer;
     s8 *pHIDReportDescriptor = (s8 *)pThis->m_pHIDReportDescriptor;
@@ -237,8 +234,12 @@ static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
         }
 
         if ((item & 0xFC) == HID_REPORT_ID) {
-            if (BitGetUnsigned(pReportBuffer, 0, 8) != arg)
+            if (id != 0)
                 break;
+            id = BitGetUnsigned(pReportBuffer, 0, 8);
+            if (id != 0 && id != arg)
+                return;
+            id = arg;
             offset = 8;
         }
 
@@ -321,7 +322,6 @@ static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
                     }
                 }
                 offset += count * size;
-                reportsize += count * size;
                 break;
             case HID_OUTPUT:
                 break;
@@ -331,7 +331,7 @@ static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
     pState->naxes = naxes;
     pState->nhats = nhats;
 
-    pThis->m_nReportSize = (reportsize + 7) / 8;
+    pThis->m_nReportSize = (offset + 7) / 8;
 }
 
 boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
@@ -431,6 +431,9 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
     }
     //DebugHexdump (pThis->m_pHIDReportDescriptor, pHIDDesc->wReportDescriptorLength, "hid");
 
+    pThis->m_pReportBuffer[0] = 0;
+    USBGamePadDeviceDecodeReport (pThis);
+
     if (!USBDeviceConfigure (&pThis->m_USBDevice))
     {
         LogWrite (FromUSBPad, LOG_ERROR, "Cannot set configuration");
@@ -438,11 +441,28 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
         return FALSE;
     }
 
-    USBGamePadDeviceGetReport (pThis);
+    if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
+                       USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+                       REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
+                       pThis->m_ucAlternateSetting,
+                       pThis->m_ucInterfaceNumber, 0, 0) < 0)
+    {
+        LogWrite (FromUSBPad, LOG_ERROR, "Cannot set interface");
+
+        return FALSE;
+    }
+
+    pThis->m_nDeviceIndex = s_nDeviceNumber++;
+
+    if (   pUSBDevice->m_pDeviceDesc->idVendor == 0x054c
+        && pUSBDevice->m_pDeviceDesc->idProduct == 0x0268)
+    {
+        USBGamePadDevicePS3Configure (pThis);
+    }
 
 	TString DeviceName;
 	String (&DeviceName);
-	StringFormat (&DeviceName, "upad%u", s_nDeviceNumber++);
+	StringFormat (&DeviceName, "upad%u", pThis->m_nDeviceIndex);
 	DeviceNameServiceAddDevice (DeviceNameServiceGet (), StringGet (&DeviceName), pThis, FALSE);
 
 	_String (&DeviceName);
@@ -488,7 +508,7 @@ void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *p
         if (pThis->m_pHIDReportDescriptor != 0 && pThis->m_pStatusHandler != 0)
         {
             USBGamePadDeviceDecodeReport (pThis);
-            (*pThis->m_pStatusHandler) (&pThis->m_State);
+            (*pThis->m_pStatusHandler) (pThis->m_nDeviceIndex - 1, &pThis->m_State);
         }
 	}
 
@@ -506,8 +526,55 @@ void USBGamePadDeviceGetReport (TUSBGamePadDevice *pThis)
                        REQUEST_IN | REQUEST_CLASS | REQUEST_TO_INTERFACE,
                        GET_REPORT, (REPORT_TYPE_INPUT << 8) | 0x00,
                        pThis->m_ucInterfaceNumber,
-                       pThis->m_pReportBuffer, 8) > 0)
+                       pThis->m_pReportBuffer, pThis->m_nReportSize) > 0)
     {
         USBGamePadDeviceDecodeReport (pThis);
     }
+}
+
+void USBGamePadDevicePS3Configure (TUSBGamePadDevice *pThis)
+{
+    static u8 writeBuf[] =
+    {
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            0xff, 0x27, 0x10, 0x00, 0x32,
+            0xff, 0x27, 0x10, 0x00, 0x32,
+            0xff, 0x27, 0x10, 0x00, 0x32,
+            0xff, 0x27, 0x10, 0x00, 0x32,
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00
+    };
+
+    static u8 leds[] =
+    {
+        0x00, // OFF
+        0x01, // LED1
+        0x02, // LED2
+        0x04, // LED3
+        0x08, // LED4
+    };
+
+    /* Special PS3 Controller enable commands */
+    pThis->m_pReportBuffer[0] = 0x42;
+    pThis->m_pReportBuffer[1] = 0x0c;
+    pThis->m_pReportBuffer[2] = 0x00;
+    pThis->m_pReportBuffer[3] = 0x00;
+    DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
+                           USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+                           REQUEST_OUT | REQUEST_CLASS | REQUEST_TO_INTERFACE,
+                           SET_REPORT, (REPORT_TYPE_FEATURE << 8) | 0xf4,
+                           pThis->m_ucInterfaceNumber,
+                           pThis->m_pReportBuffer, 4);
+
+    /* Turn on LED */
+    writeBuf[9] |= (u8)(leds[pThis->m_nDeviceIndex] << 1);
+    DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
+                           USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+                           REQUEST_OUT | REQUEST_CLASS | REQUEST_TO_INTERFACE,
+                           SET_REPORT, (REPORT_TYPE_OUTPUT << 8) | 0x01,
+                           pThis->m_ucInterfaceNumber,
+                           writeBuf, 48);
 }

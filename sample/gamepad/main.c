@@ -9,11 +9,11 @@
 
 static const char FromSample[] = "sample";
 
-static void GamePadStatusHandler (const USPiGamePadState *pState)
+static void GamePadStatusHandler (unsigned int nDeviceIndex, const USPiGamePadState *pState)
 {
 	TString Msg;
 	String (&Msg);
-	StringFormat (&Msg, "GamePad: Buttons 0x%X", pState->buttons);
+	StringFormat (&Msg, "GamePad %u: Buttons 0x%X", nDeviceIndex + 1, pState->buttons);
 
 	TString Value;
 	String (&Value);

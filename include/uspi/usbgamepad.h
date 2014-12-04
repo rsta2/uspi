@@ -28,13 +28,10 @@
 #include <uspi/types.h>
 #include <uspi.h>
 
-#define BOOT_REPORT_SIZE	8
-
-typedef void TGamePadStatusHandler (const USPiGamePadState *pGamepadState);
-
 typedef struct TUSBGamePadDevice
 {
 	TUSBDevice m_USBDevice;
+	unsigned m_nDeviceIndex;
 
 	u8 m_ucInterfaceNumber;
 	u8 m_ucAlternateSetting;
