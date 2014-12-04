@@ -232,14 +232,22 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 	
 	USBDeviceSetAddress (pThis, ucAddress);
 
-	if (pThis->m_pDeviceDesc->iManufacturer != 0)
+	if (   pThis->m_pDeviceDesc->iManufacturer != 0
+	    || pThis->m_pDeviceDesc->iProduct != 0)
 	{
-		USBStringGetFromDescriptor (&pThis->m_ManufacturerString, pThis->m_pDeviceDesc->iManufacturer);
-	}
+		u16 usLanguageID = USBStringGetLanguageID (&pThis->m_ManufacturerString);
 
-	if (pThis->m_pDeviceDesc->iProduct != 0)
-	{
-		USBStringGetFromDescriptor (&pThis->m_ProductString, pThis->m_pDeviceDesc->iProduct);
+		if (pThis->m_pDeviceDesc->iManufacturer != 0)
+		{
+			USBStringGetFromDescriptor (&pThis->m_ManufacturerString,
+						    pThis->m_pDeviceDesc->iManufacturer, usLanguageID);
+		}
+
+		if (pThis->m_pDeviceDesc->iProduct != 0)
+		{
+			USBStringGetFromDescriptor (&pThis->m_ProductString,
+						    pThis->m_pDeviceDesc->iProduct, usLanguageID);
+		}
 	}
 
 	assert (pThis->m_pConfigDesc == 0);

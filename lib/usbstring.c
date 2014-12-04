@@ -24,7 +24,9 @@
 #include <uspi/assert.h>
 #include <uspios.h>
 
-#define USBSTR_MIN_LENGTH	16
+#define USBSTR_MIN_LENGTH	4
+
+#define USBSTR_DEFAULT_LANGID	0x409
 
 void USBString (TUSBString *pThis, struct TUSBDevice *pDevice)
 {
@@ -78,7 +80,7 @@ void _USBString (TUSBString *pThis)
 	pThis->m_pDevice = 0;
 }
 
-boolean USBStringGetFromDescriptor (TUSBString *pThis, u8 ucID)
+boolean USBStringGetFromDescriptor (TUSBString *pThis, u8 ucID, u16 usLanguageID)
 {
 	assert (pThis != 0);
 	assert (ucID > 0);
@@ -91,9 +93,11 @@ boolean USBStringGetFromDescriptor (TUSBString *pThis, u8 ucID)
 	assert (pThis->m_pUSBString != 0);
 
 	assert (pThis->m_pDevice != 0);
-	if (DWHCIDeviceGetDescriptor (USBDeviceGetHost (pThis->m_pDevice), USBDeviceGetEndpoint0 (pThis->m_pDevice),
-				      DESCRIPTOR_STRING, ucID,
-				      pThis->m_pUSBString, USBSTR_MIN_LENGTH, REQUEST_IN) < 0)
+	if (DWHCIDeviceControlMessage (USBDeviceGetHost (pThis->m_pDevice),
+				       USBDeviceGetEndpoint0 (pThis->m_pDevice),
+				       REQUEST_IN, GET_DESCRIPTOR,
+				       (DESCRIPTOR_STRING << 8) | ucID, usLanguageID,
+				       pThis->m_pUSBString, USBSTR_MIN_LENGTH) < 0)
 	{
 		return FALSE;
 	}
@@ -112,9 +116,11 @@ boolean USBStringGetFromDescriptor (TUSBString *pThis, u8 ucID)
 		pThis->m_pUSBString = (TUSBStringDescriptor *) malloc (ucLength);
 		assert (pThis->m_pUSBString != 0);
 
-		if (DWHCIDeviceGetDescriptor (USBDeviceGetHost (pThis->m_pDevice), USBDeviceGetEndpoint0 (pThis->m_pDevice),
-					      DESCRIPTOR_STRING, ucID,
-					      pThis->m_pUSBString, ucLength, REQUEST_IN) != (int) ucLength)
+		if (DWHCIDeviceControlMessage (USBDeviceGetHost (pThis->m_pDevice),
+					       USBDeviceGetEndpoint0 (pThis->m_pDevice),
+					       REQUEST_IN, GET_DESCRIPTOR,
+					       (DESCRIPTOR_STRING << 8) | ucID, usLanguageID,
+					       pThis->m_pUSBString, ucLength) != (int) ucLength)
 		{
 			return FALSE;
 		}
@@ -163,4 +169,81 @@ const char *USBStringGet (TUSBString *pThis)
 {
 	assert (pThis != 0);
 	return StringGet (pThis->m_pString);
+}
+
+u16 USBStringGetLanguageID (TUSBString *pThis)
+{
+	assert (pThis != 0);
+
+	TUSBStringDescriptor *pLanguageIDs = (TUSBStringDescriptor *) malloc (USBSTR_MIN_LENGTH);
+	assert (pLanguageIDs != 0);
+
+	assert (pThis->m_pDevice != 0);
+	if (DWHCIDeviceGetDescriptor (USBDeviceGetHost (pThis->m_pDevice),
+				      USBDeviceGetEndpoint0 (pThis->m_pDevice),
+				      DESCRIPTOR_STRING, 0,
+				      pLanguageIDs, USBSTR_MIN_LENGTH, REQUEST_IN) < 0)
+	{
+		free (pLanguageIDs);
+
+		return USBSTR_DEFAULT_LANGID;
+	}
+
+	u8 ucLength = pLanguageIDs->bLength;
+	if (   ucLength < 4
+	    || (ucLength & 1) != 0
+	    || pLanguageIDs->bDescriptorType != DESCRIPTOR_STRING)
+	{
+		free (pLanguageIDs);
+
+		return USBSTR_DEFAULT_LANGID;
+	}
+
+	if (ucLength > USBSTR_MIN_LENGTH)
+	{
+		free (pLanguageIDs);
+		pLanguageIDs = (TUSBStringDescriptor *) malloc (ucLength);
+		assert (pLanguageIDs != 0);
+
+		if (DWHCIDeviceGetDescriptor (USBDeviceGetHost (pThis->m_pDevice),
+					      USBDeviceGetEndpoint0 (pThis->m_pDevice),
+					      DESCRIPTOR_STRING, 0,
+					      pLanguageIDs, ucLength, REQUEST_IN) != (int) ucLength)
+		{
+			free (pLanguageIDs);
+
+			return USBSTR_DEFAULT_LANGID;
+		}
+
+		if (   pLanguageIDs->bLength != ucLength
+		    || (pLanguageIDs->bLength & 1) != 0
+		    || pLanguageIDs->bDescriptorType != DESCRIPTOR_STRING)
+		{
+			free (pLanguageIDs);
+
+			return USBSTR_DEFAULT_LANGID;
+		}
+	}
+
+	assert (pLanguageIDs->bLength >= 4);
+	assert ((pLanguageIDs->bLength & 1) == 0);
+	size_t nLength = (pLanguageIDs->bLength-2) / 2;
+
+	// search for default language ID
+	for (unsigned i = 0; i < nLength; i++)
+	{
+		if (pLanguageIDs->bString[i] == USBSTR_DEFAULT_LANGID)
+		{
+			free (pLanguageIDs);
+
+			return USBSTR_DEFAULT_LANGID;
+		}
+	}
+
+	// default language ID not found, use first ID
+	u16 usResult = pLanguageIDs->bString[0];
+
+	free (pLanguageIDs);
+
+	return usResult;
 }

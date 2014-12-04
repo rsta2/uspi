@@ -44,9 +44,11 @@ void USBString (TUSBString *pThis, struct TUSBDevice *pDevice);
 void USBStringCopy (TUSBString *pThis, TUSBString *pParent);
 void _USBString (TUSBString *pThis);
 
-boolean USBStringGetFromDescriptor (TUSBString *pThis, u8 ucID);
+boolean USBStringGetFromDescriptor (TUSBString *pThis, u8 ucID, u16 usLanguageID);
 
 const char *USBStringGet (TUSBString *pThis);
+
+u16 USBStringGetLanguageID (TUSBString *pThis);
 
 #ifdef __cplusplus
 }
