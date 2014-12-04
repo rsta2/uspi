@@ -141,13 +141,11 @@ int USPiGamePadAvailable (void);
 #define MAX_AXIS    6
 #define MAX_HATS    6
 
-typedef struct USPiGamePadState {
-    unsigned short idVendor;
-    unsigned short idProduct;
-    unsigned short idVersion;
-
+typedef struct USPiGamePadState
+{
     int naxes;
-    struct {
+    struct
+    {
         int value;
         int minimum;
         int maximum;
@@ -164,7 +162,7 @@ USPiGamePadState;
 // returns 0 on failure
 const USPiGamePadState *USPiGamePadGetStatus (unsigned nDeviceIndex);		// nDeviceIndex is 0-based
 
-typedef void TGamePadStatusHandler (const USPiGamePadState *pGamePadState);
+typedef void TGamePadStatusHandler (unsigned nDeviceIndex, const USPiGamePadState *pGamePadState);
 void USPiGamePadRegisterStatusHandler (TGamePadStatusHandler *pStatusHandler);
 
 //
