@@ -42,6 +42,7 @@ typedef struct TUSBBulkOnlyMassStorageDevice
 	TUSBEndpoint *m_pEndpointOut;
 
 	unsigned m_nCWBTag;
+	unsigned m_nBlockCount;
 	unsigned long long m_ullOffset;
 }
 TUSBBulkOnlyMassStorageDevice;
@@ -55,6 +56,8 @@ int USBBulkOnlyMassStorageDeviceRead (TUSBBulkOnlyMassStorageDevice *pThis, void
 int USBBulkOnlyMassStorageDeviceWrite (TUSBBulkOnlyMassStorageDevice *pThis, const void *pBuffer, unsigned nCount);
 
 unsigned long long USBBulkOnlyMassStorageDeviceSeek (TUSBBulkOnlyMassStorageDevice *pThis, unsigned long long ullOffset);
+
+unsigned USBBulkOnlyMassStorageDeviceGetCapacity (TUSBBulkOnlyMassStorageDevice *pThis);
 
 #ifdef __cplusplus
 }

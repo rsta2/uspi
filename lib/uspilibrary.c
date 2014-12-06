@@ -178,6 +178,19 @@ int USPiMassStorageDeviceWrite (unsigned long long ullOffset, const void *pBuffe
 	return USBBulkOnlyMassStorageDeviceWrite (s_pLibrary->pUMSD[nDeviceIndex], pBuffer, nCount);
 }
 
+unsigned USPiMassStorageDeviceGetCapacity (unsigned nDeviceIndex)
+{
+	assert (s_pLibrary != 0);
+
+	if (   nDeviceIndex >= MAX_DEVICES
+	    || s_pLibrary->pUMSD[nDeviceIndex] == 0)
+	{
+		return 0;
+	}
+
+	return USBBulkOnlyMassStorageDeviceGetCapacity (s_pLibrary->pUMSD[nDeviceIndex]);
+}
+
 int USPiEthernetAvailable (void)
 {
 	assert (s_pLibrary != 0);

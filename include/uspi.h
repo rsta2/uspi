@@ -111,6 +111,9 @@ int USPiMassStorageDeviceRead (unsigned long long ullOffset, void *pBuffer, unsi
 // nDeviceIndex is 0-based
 int USPiMassStorageDeviceWrite (unsigned long long ullOffset, const void *pBuffer, unsigned nCount, unsigned nDeviceIndex);
 
+// returns the number of available blocks of USPI_BLOCK_SIZE or 0 on failure
+unsigned USPiMassStorageDeviceGetCapacity (unsigned nDeviceIndex);
+
 //
 // Ethernet services
 //

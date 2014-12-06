@@ -41,7 +41,7 @@ typedef struct TCBW
 			Reserved1	: 4,
 			bCBWCBLength	: 5,		// valid length of the CBWCB in bytes
 			Reserved2	: 3;
-	// CBWCB follows
+	unsigned char	CBWCB[16];
 }
 PACKED TCBW;
 
@@ -61,6 +61,8 @@ PACKED TCSW;
 
 // SCSI Transparent Command Set
 
+#define SCSI_CONTROL		0x00
+
 typedef struct TSCSIInquiry
 {
 	unsigned char	OperationCode,
@@ -70,17 +72,8 @@ typedef struct TSCSIInquiry
 			Reserved,
 			AllocationLength,
 			Control;
-#define SCSI_INQUIRY_CONTROL	0x00
 }
 PACKED TSCSIInquiry;
-
-typedef struct TCBWInquiry
-{
-	TCBW		CBW;
-	TSCSIInquiry	SCSIInquiry;
-	unsigned char	Padding[10];
-}
-PACKED TCBWInquiry;
 
 typedef struct TSCSIInquiryResponse
 {
@@ -102,6 +95,71 @@ typedef struct TSCSIInquiryResponse
 }
 PACKED TSCSIInquiryResponse;
 
+typedef struct TSCSITestUnitReady
+{
+	unsigned char	OperationCode;
+#define SCSI_OP_TEST_UNIT_READY		0x00
+	unsigned int	Reserved;
+	unsigned char	Control;
+}
+PACKED TSCSITestUnitReady;
+
+typedef struct TSCSIRequestSense
+{
+	unsigned char	OperationCode;
+#define SCSI_REQUEST_SENSE		0x03
+	unsigned char	DescriptorFormat	: 1,		// set to 0
+			Reserved1		: 7;
+	unsigned short	Reserved2;
+	unsigned char	AllocationLength;
+	unsigned char	Control;
+}
+PACKED TSCSIRequestSense;
+
+typedef struct TSCSIRequestSenseResponse7x
+{
+	unsigned char	ResponseCode		: 7,
+			Valid			: 1;
+	unsigned char	Obsolete;
+	unsigned char	SenseKey		: 4,
+			Reserved		: 1,
+			ILI			: 1,
+			EOM			: 1,
+			FileMark		: 1;
+	unsigned int	Information;				// big endian
+	unsigned char	AdditionalSenseLength;
+	unsigned int	CommandSpecificInformation;		// big endian
+	unsigned char	AdditionalSenseCode;
+	unsigned char	AdditionalSenseCodeQualifier;
+	unsigned char	FieldReplaceableUnitCode;
+	unsigned char	SenseKeySpecificHigh	: 7,
+			SKSV			: 1;
+	unsigned short	SenseKeySpecificLow;
+	
+}
+PACKED TSCSIRequestSenseResponse7x;
+
+typedef struct TSCSIReadCapacity10
+{
+	unsigned char	OperationCode;
+#define SCSI_OP_READ_CAPACITY10		0x25
+	unsigned char	Obsolete		: 1,
+			Reserved1		: 7;
+	unsigned int	LogicalBlockAddress;			// set to 0
+	unsigned short	Reserved2;
+	unsigned char	PartialMediumIndicator	: 1,		// set to 0
+			Reserved3		: 7;
+	unsigned char	Control;
+}
+PACKED TSCSIReadCapacity10;
+
+typedef struct TSCSIReadCapacityResponse
+{
+	unsigned int	ReturnedLogicalBlockAddress;		// big endian
+	unsigned int	BlockLengthInBytes;			// big endian
+}
+PACKED TSCSIReadCapacityResponse;
+
 typedef struct TSCSIRead10
 {
 	unsigned char	OperationCode,
@@ -111,17 +169,8 @@ typedef struct TSCSIRead10
 	unsigned char	Reserved2;
 	unsigned short	TransferLength;				// block count, big endian
 	unsigned char	Control;
-#define SCSI_READ_CONTROL	0x00
 }
 PACKED TSCSIRead10;
-
-typedef struct TCBWRead
-{
-	TCBW		CBW;
-	TSCSIRead10	SCSIRead;
-	unsigned char	Padding[6];
-}
-PACKED TCBWRead;
 
 typedef struct TSCSIWrite10
 {
@@ -133,17 +182,8 @@ typedef struct TSCSIWrite10
 	unsigned char	Reserved;
 	unsigned short	TransferLength;				// block count, big endian
 	unsigned char	Control;
-#define SCSI_WRITE_CONTROL	0x00
 }
 PACKED TSCSIWrite10;
-
-typedef struct TCBWWrite
-{
-	TCBW		CBW;
-	TSCSIWrite10	SCSIWrite;
-	unsigned char	Padding[6];
-}
-PACKED TCBWWrite;
 
 static unsigned s_nDeviceNumber = 1;
 
@@ -151,6 +191,9 @@ static const char FromUmsd[] = "umsd";
 
 int USBBulkOnlyMassStorageDeviceTryRead (TUSBBulkOnlyMassStorageDevice *pThis, void *pBuffer, unsigned nCount);
 int USBBulkOnlyMassStorageDeviceTryWrite (TUSBBulkOnlyMassStorageDevice *pThis, const void *pBuffer, unsigned nCount);
+int USBBulkOnlyMassStorageDeviceCommand (TUSBBulkOnlyMassStorageDevice *pThis,
+					 void *pCmdBlk, unsigned nCmdBlkLen,
+					 void *pBuffer, unsigned nBufLen, boolean bIn);
 int USBBulkOnlyMassStorageDeviceReset (TUSBBulkOnlyMassStorageDevice *pThis);
 
 void USBBulkOnlyMassStorageDevice (TUSBBulkOnlyMassStorageDevice *pThis, TUSBDevice *pDevice)
@@ -163,6 +206,7 @@ void USBBulkOnlyMassStorageDevice (TUSBBulkOnlyMassStorageDevice *pThis, TUSBDev
 	pThis->m_pEndpointIn = 0;
 	pThis->m_pEndpointOut = 0;
 	pThis->m_nCWBTag = 0;
+	pThis->m_nBlockCount = 0;
 	pThis->m_ullOffset = 0;
 }
 
@@ -266,67 +310,112 @@ boolean USBBulkOnlyMassStorageDeviceConfigure (TUSBDevice *pUSBDevice)
 		return FALSE;
 	}
 
-	TCBWInquiry CBWInquiry;
-
-	CBWInquiry.CBW.dCWBSignature		= CBWSIGNATURE;
-	CBWInquiry.CBW.dCWBTag			= ++pThis->m_nCWBTag;
-	CBWInquiry.CBW.dCBWDataTransferLength	= sizeof (TSCSIInquiryResponse);
-	CBWInquiry.CBW.bmCBWFlags		= CBWFLAGS_DATA_IN;
-	CBWInquiry.CBW.bCBWLUN			= CBWLUN;
-	CBWInquiry.CBW.Reserved1		= 0;
-	CBWInquiry.CBW.bCBWCBLength		= sizeof (TSCSIInquiry);
-	CBWInquiry.CBW.Reserved2		= 0;
-
-	CBWInquiry.SCSIInquiry.OperationCode		= SCSI_OP_INQUIRY;
-	CBWInquiry.SCSIInquiry.LogicalUnitNumberEVPD	= 0;
-	CBWInquiry.SCSIInquiry.PageCode			= 0;
-	CBWInquiry.SCSIInquiry.Reserved			= 0;
-	CBWInquiry.SCSIInquiry.AllocationLength		= sizeof (TSCSIInquiryResponse);
-	CBWInquiry.SCSIInquiry.Control			= SCSI_INQUIRY_CONTROL;
+	TSCSIInquiry SCSIInquiry;
+	SCSIInquiry.OperationCode	  = SCSI_OP_INQUIRY;
+	SCSIInquiry.LogicalUnitNumberEVPD = 0;
+	SCSIInquiry.PageCode		  = 0;
+	SCSIInquiry.Reserved		  = 0;
+	SCSIInquiry.AllocationLength	  = sizeof (TSCSIInquiryResponse);
+	SCSIInquiry.Control		  = SCSI_CONTROL;
 
 	TSCSIInquiryResponse SCSIInquiryResponse;
-	TCSW CSW;
-
-	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
-	assert (pHost != 0);
-
-	if (   DWHCIDeviceTransfer (pHost, pThis->m_pEndpointOut, &CBWInquiry, sizeof CBWInquiry) < 0
-	    || DWHCIDeviceTransfer (pHost, pThis->m_pEndpointIn, &SCSIInquiryResponse, sizeof SCSIInquiryResponse) != (int) sizeof SCSIInquiryResponse
-	    || DWHCIDeviceTransfer (pHost, pThis->m_pEndpointIn, &CSW, sizeof CSW) != (int) sizeof CSW)
+	if (USBBulkOnlyMassStorageDeviceCommand (pThis, &SCSIInquiry, sizeof SCSIInquiry,
+						 &SCSIInquiryResponse, sizeof SCSIInquiryResponse,
+						 TRUE) != (int) sizeof SCSIInquiryResponse)
 	{
 		LogWrite (FromUmsd, LOG_ERROR, "Device does not respond");
 
 		return FALSE;
 	}
 
-	if (   CSW.dCSWSignature != CSWSIGNATURE
-	    || CSW.dCSWTag       != pThis->m_nCWBTag)
-	{
-		LogWrite (FromUmsd, LOG_ERROR, "Invalid inquiry response");
-
-		return FALSE;
-	}
-
-	if (CSW.bCSWStatus != CSWSTATUS_PASSED)
-	{
-		LogWrite (FromUmsd, LOG_ERROR, "Inquiry failed (status 0x%02X)", (unsigned) CSW.bCSWStatus);
-
-		return FALSE;
-	}
-
-	if (CSW.dCSWDataResidue != 0)
-	{
-		LogWrite (FromUmsd, LOG_ERROR, "Invalid data residue on inquiry");
-
-		return FALSE;
-	}
-	
 	if (SCSIInquiryResponse.PeripheralDeviceType != SCSI_PDT_DIRECT_ACCESS_BLOCK)
 	{
 		LogWrite (FromUmsd, LOG_ERROR, "Unsupported device type: 0x%02X", (unsigned) SCSIInquiryResponse.PeripheralDeviceType);
 		
 		return FALSE;
 	}
+
+	unsigned nTries = 100;
+	while (--nTries)
+	{
+		TSCSITestUnitReady SCSITestUnitReady;
+		SCSITestUnitReady.OperationCode = SCSI_OP_TEST_UNIT_READY;
+		SCSITestUnitReady.Reserved	= 0;
+		SCSITestUnitReady.Control	= SCSI_CONTROL;
+
+		if (USBBulkOnlyMassStorageDeviceCommand (pThis, &SCSITestUnitReady,
+							 sizeof SCSITestUnitReady, 0, 0, FALSE) >= 0)
+		{
+			break;
+		}
+
+		TSCSIRequestSense SCSIRequestSense;
+		SCSIRequestSense.OperationCode	  = SCSI_REQUEST_SENSE;
+		SCSIRequestSense.DescriptorFormat = 0;
+		SCSIRequestSense.Reserved1	  = 0;
+		SCSIRequestSense.Reserved2	  = 0;
+		SCSIRequestSense.AllocationLength = sizeof (TSCSIRequestSenseResponse7x);
+		SCSIRequestSense.Control	  = SCSI_CONTROL;
+
+		TSCSIRequestSenseResponse7x SCSIRequestSenseResponse7x;
+		if (USBBulkOnlyMassStorageDeviceCommand (pThis, &SCSIRequestSense, sizeof SCSIRequestSense,
+							 &SCSIRequestSenseResponse7x, sizeof SCSIRequestSenseResponse7x,
+							 TRUE) < 0)
+		{
+			LogWrite (FromUmsd, LOG_ERROR, "Request sense failed");
+
+			return FALSE;
+		}
+
+		MsDelay (100);
+	}
+
+	if (nTries == 0)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "Unit is not ready");
+
+		return FALSE;
+	}
+
+	TSCSIReadCapacity10 SCSIReadCapacity;
+	SCSIReadCapacity.OperationCode		= SCSI_OP_READ_CAPACITY10;
+	SCSIReadCapacity.Obsolete		= 0;
+	SCSIReadCapacity.Reserved1		= 0;
+	SCSIReadCapacity.LogicalBlockAddress	= 0;
+	SCSIReadCapacity.Reserved2		= 0;
+	SCSIReadCapacity.PartialMediumIndicator	= 0;
+	SCSIReadCapacity.Reserved3		= 0;
+	SCSIReadCapacity.Control		= SCSI_CONTROL;
+
+	TSCSIReadCapacityResponse SCSIReadCapacityResponse;
+	if (USBBulkOnlyMassStorageDeviceCommand (pThis, &SCSIReadCapacity, sizeof SCSIReadCapacity,
+						 &SCSIReadCapacityResponse, sizeof SCSIReadCapacityResponse,
+						 TRUE) != (int) sizeof SCSIReadCapacityResponse)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "Read capacity failed");
+
+		return FALSE;
+	}
+
+	unsigned nBlockSize = uspi_le2be32 (SCSIReadCapacityResponse.BlockLengthInBytes);
+	if (nBlockSize != UMSD_BLOCK_SIZE)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "Unsupported block size: %u", nBlockSize);
+
+		return FALSE;
+	}
+
+	pThis->m_nBlockCount = uspi_le2be32 (SCSIReadCapacityResponse.ReturnedLogicalBlockAddress);
+	if (pThis->m_nBlockCount == (u32) -1)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "Unsupported disk size > 2TB");
+
+		return FALSE;
+	}
+
+	pThis->m_nBlockCount++;
+
+	LogWrite (FromUmsd, LOG_DEBUG, "Capacity is %u MByte", pThis->m_nBlockCount / (0x100000 / UMSD_BLOCK_SIZE));
 
 	TString DeviceName;
 	String (&DeviceName);
@@ -401,6 +490,13 @@ unsigned long long USBBulkOnlyMassStorageDeviceSeek (TUSBBulkOnlyMassStorageDevi
 	return pThis->m_ullOffset;
 }
 
+unsigned USBBulkOnlyMassStorageDeviceGetCapacity (TUSBBulkOnlyMassStorageDevice *pThis)
+{
+	assert (pThis != 0);
+
+	return pThis->m_nBlockCount;
+}
+
 int USBBulkOnlyMassStorageDeviceTryRead (TUSBBulkOnlyMassStorageDevice *pThis, void *pBuffer, unsigned nCount)
 {
 	assert (pThis != 0);
@@ -422,41 +518,20 @@ int USBBulkOnlyMassStorageDeviceTryRead (TUSBBulkOnlyMassStorageDevice *pThis, v
 
 	//LogWrite (FromUmsd, LOG_DEBUG, "TryRead %u/0x%X/%u", nBlockAddress, (unsigned) pBuffer, (unsigned) usTransferLength);
 
-	TCBWRead CBWRead;
+	TSCSIRead10 SCSIRead;
+	SCSIRead.OperationCode		= SCSI_OP_READ;
+	SCSIRead.Reserved1		= 0;
+	SCSIRead.LogicalBlockAddress	= uspi_le2be32 (nBlockAddress);
+	SCSIRead.Reserved2		= 0;
+	SCSIRead.TransferLength		= uspi_le2be16 (usTransferLength);
+	SCSIRead.Control		= SCSI_CONTROL;
 
-	CBWRead.CBW.dCWBSignature		= CBWSIGNATURE;
-	CBWRead.CBW.dCWBTag			= ++pThis->m_nCWBTag;
-	CBWRead.CBW.dCBWDataTransferLength	= nCount;
-	CBWRead.CBW.bmCBWFlags			= CBWFLAGS_DATA_IN;
-	CBWRead.CBW.bCBWLUN			= CBWLUN;
-	CBWRead.CBW.Reserved1			= 0;
-	CBWRead.CBW.bCBWCBLength		= sizeof (TSCSIRead10);
-	CBWRead.CBW.Reserved2			= 0;
-
-	CBWRead.SCSIRead.OperationCode		= SCSI_OP_READ;
-	CBWRead.SCSIRead.Reserved1		= 0;
-	CBWRead.SCSIRead.LogicalBlockAddress	= uspi_le2be32 (nBlockAddress);
-	CBWRead.SCSIRead.Reserved2		= 0;
-	CBWRead.SCSIRead.TransferLength		= uspi_le2be16 (usTransferLength);
-	CBWRead.SCSIRead.Control		= SCSI_READ_CONTROL;
-
-	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
-	assert (pHost != 0);
-	
-	TCSW CSW;
-
-	if (   DWHCIDeviceTransfer (pHost, pThis->m_pEndpointOut, &CBWRead, sizeof CBWRead) < 0
-	    || DWHCIDeviceTransfer (pHost, pThis->m_pEndpointIn, pBuffer, nCount) != (int) nCount
-	    || DWHCIDeviceTransfer (pHost, pThis->m_pEndpointIn, &CSW, sizeof CSW) != (int) sizeof CSW)
+	if (USBBulkOnlyMassStorageDeviceCommand (pThis, &SCSIRead, sizeof SCSIRead,
+						 pBuffer, nCount,
+						 TRUE) != (int) nCount)
 	{
-		return -1;
-	}
+		LogWrite (FromUmsd, LOG_ERROR, "TryRead failed");
 
-	if (   CSW.dCSWSignature   != CSWSIGNATURE
-	    || CSW.dCSWTag         != pThis->m_nCWBTag
-	    || CSW.bCSWStatus      != CSWSTATUS_PASSED
-	    || CSW.dCSWDataResidue != 0)
-	{
 		return -1;
 	}
 
@@ -484,45 +559,107 @@ int USBBulkOnlyMassStorageDeviceTryWrite (TUSBBulkOnlyMassStorageDevice *pThis, 
 
 	//LogWrite (FromUmsd, LOG_DEBUG, "TryWrite %u/0x%X/%u", nBlockAddress, (unsigned) pBuffer, (unsigned) usTransferLength);
 
-	TCBWWrite CBWWrite;
+	TSCSIWrite10 SCSIWrite;
+	SCSIWrite.OperationCode		= SCSI_OP_WRITE;
+	SCSIWrite.Flags			= SCSI_WRITE_FUA;
+	SCSIWrite.LogicalBlockAddress	= uspi_le2be32 (nBlockAddress);
+	SCSIWrite.Reserved		= 0;
+	SCSIWrite.TransferLength	= uspi_le2be16 (usTransferLength);
+	SCSIWrite.Control		= SCSI_CONTROL;
 
-	CBWWrite.CBW.dCWBSignature		= CBWSIGNATURE;
-	CBWWrite.CBW.dCWBTag			= ++pThis->m_nCWBTag;
-	CBWWrite.CBW.dCBWDataTransferLength	= nCount;
-	CBWWrite.CBW.bmCBWFlags			= 0;
-	CBWWrite.CBW.bCBWLUN			= CBWLUN;
-	CBWWrite.CBW.Reserved1			= 0;
-	CBWWrite.CBW.bCBWCBLength		= sizeof (TSCSIWrite10);
-	CBWWrite.CBW.Reserved2			= 0;
-
-	CBWWrite.SCSIWrite.OperationCode	= SCSI_OP_WRITE;
-	CBWWrite.SCSIWrite.Flags		= SCSI_WRITE_FUA;
-	CBWWrite.SCSIWrite.LogicalBlockAddress	= uspi_le2be32 (nBlockAddress);
-	CBWWrite.SCSIWrite.Reserved		= 0;
-	CBWWrite.SCSIWrite.TransferLength	= uspi_le2be16 (usTransferLength);
-	CBWWrite.SCSIWrite.Control		= SCSI_WRITE_CONTROL;
-
-	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
-	assert (pHost != 0);
-	
-	TCSW CSW;
-
-	if (   DWHCIDeviceTransfer (pHost, pThis->m_pEndpointOut, &CBWWrite, sizeof CBWWrite) < 0
-	    || DWHCIDeviceTransfer (pHost, pThis->m_pEndpointOut, (void *) pBuffer, nCount) < 0
-	    || DWHCIDeviceTransfer (pHost, pThis->m_pEndpointIn, &CSW, sizeof CSW) != (int) sizeof CSW)
+	if (USBBulkOnlyMassStorageDeviceCommand (pThis, &SCSIWrite, sizeof SCSIWrite,
+						 (void *) pBuffer, nCount,
+						 FALSE) < 0)
 	{
-		return -1;
-	}
+		LogWrite (FromUmsd, LOG_ERROR, "TryWrite failed");
 
-	if (   CSW.dCSWSignature   != CSWSIGNATURE
-	    || CSW.dCSWTag         != pThis->m_nCWBTag
-	    || CSW.bCSWStatus      != CSWSTATUS_PASSED
-	    || CSW.dCSWDataResidue != 0)
-	{
 		return -1;
 	}
 
 	return nCount;
+}
+
+int USBBulkOnlyMassStorageDeviceCommand (TUSBBulkOnlyMassStorageDevice *pThis,
+					 void *pCmdBlk, unsigned nCmdBlkLen,
+					 void *pBuffer, unsigned nBufLen, boolean bIn)
+{
+	assert (pThis != 0);
+
+	assert (pCmdBlk != 0);
+	assert (6 <= nCmdBlkLen && nCmdBlkLen <= 16);
+	assert (nBufLen == 0 || pBuffer != 0);
+
+	TCBW CBW;
+	memset (&CBW, 0, sizeof CBW);
+
+	CBW.dCWBSignature	   = CBWSIGNATURE;
+	CBW.dCWBTag		   = ++pThis->m_nCWBTag;
+	CBW.dCBWDataTransferLength = nBufLen;
+	CBW.bmCBWFlags		   = bIn ? CBWFLAGS_DATA_IN : 0;
+	CBW.bCBWLUN		   = CBWLUN;
+	CBW.bCBWCBLength	   = (u8) nCmdBlkLen;
+
+	memcpy (CBW.CBWCB, pCmdBlk, nCmdBlkLen);
+
+	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
+	assert (pHost != 0);
+	
+	if (DWHCIDeviceTransfer (pHost, pThis->m_pEndpointOut, &CBW, sizeof CBW) < 0)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "CBW transfer failed");
+
+		return -1;
+	}
+
+	int nResult = 0;
+	
+	if (nBufLen > 0)
+	{
+		nResult = DWHCIDeviceTransfer (pHost, bIn ? pThis->m_pEndpointIn : pThis->m_pEndpointOut, pBuffer, nBufLen);
+		if (nResult < 0)
+		{
+			LogWrite (FromUmsd, LOG_ERROR, "Data transfer failed");
+
+			return -1;
+		}
+	}
+
+	TCSW CSW;
+
+	if (DWHCIDeviceTransfer (pHost, pThis->m_pEndpointIn, &CSW, sizeof CSW) != (int) sizeof CSW)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "CSW transfer failed");
+
+		return -1;
+	}
+
+	if (CSW.dCSWSignature != CSWSIGNATURE)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "CSW signature is wrong");
+
+		return -1;
+	}
+
+	if (CSW.dCSWTag != pThis->m_nCWBTag)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "CSW tag is wrong");
+
+		return -1;
+	}
+
+	if (CSW.bCSWStatus != CSWSTATUS_PASSED)
+	{
+		return -1;
+	}
+
+	if (CSW.dCSWDataResidue != 0)
+	{
+		LogWrite (FromUmsd, LOG_ERROR, "Data residue is not 0");
+
+		return -1;
+	}
+
+	return nResult;
 }
 
 int USBBulkOnlyMassStorageDeviceReset (TUSBBulkOnlyMassStorageDevice *pThis)
