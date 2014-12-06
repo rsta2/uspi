@@ -134,7 +134,7 @@ boolean USBStringGetFromDescriptor (TUSBString *pThis, u8 ucID, u16 usLanguageID
 	}
 
 	// convert to ASCII string
-	assert (pThis->m_pUSBString->bLength > 2);
+	assert (pThis->m_pUSBString->bLength >= 2);
 	assert ((pThis->m_pUSBString->bLength & 1) == 0);
 	size_t nLength = (pThis->m_pUSBString->bLength-2) / 2;
 
