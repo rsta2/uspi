@@ -135,7 +135,6 @@ typedef struct TSCSIRequestSenseResponse7x
 	unsigned char	SenseKeySpecificHigh	: 7,
 			SKSV			: 1;
 	unsigned short	SenseKeySpecificLow;
-	
 }
 PACKED TSCSIRequestSenseResponse7x;
 
