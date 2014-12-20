@@ -76,7 +76,7 @@ void USBEndpoint2 (TUSBEndpoint *pThis, TUSBDevice *pDevice, const TUSBEndpointD
 		}
 
 		// see USB 2.0 spec chapter 9.6.6
-		if (USBDeviceGetSpeed (pThis->m_pDevice) == USBSpeedLow)
+		if (USBDeviceGetSpeed (pThis->m_pDevice) != USBSpeedHigh)
 		{
 			pThis->m_nInterval = ucInterval;
 		}
@@ -89,18 +89,11 @@ void USBEndpoint2 (TUSBEndpoint *pThis, TUSBDevice *pDevice, const TUSBEndpointD
 
 			unsigned nValue = 1 << (ucInterval - 1);
 
-			if (USBDeviceGetSpeed (pThis->m_pDevice) == USBSpeedFull)
-			{
-				pThis->m_nInterval = nValue;
-			}
-			else
-			{
-				pThis->m_nInterval = nValue / 8;
+			pThis->m_nInterval = nValue / 8;
 
-				if (pThis->m_nInterval < 1)
-				{
-					pThis->m_nInterval = 1;
-				}
+			if (pThis->m_nInterval < 1)
+			{
+				pThis->m_nInterval = 1;
 			}
 		}
 	}

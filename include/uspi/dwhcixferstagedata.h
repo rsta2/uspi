@@ -40,7 +40,6 @@ typedef struct TDWHCITransferStageData
 
 	boolean		 m_bSplitTransaction;
 	boolean		 m_bSplitComplete;
-	unsigned	 m_nSplitCycles;
 
 	TUSBDevice	*m_pDevice;			// cached from *pURB
 	TUSBEndpoint	*m_pEndpoint;

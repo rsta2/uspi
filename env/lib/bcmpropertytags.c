@@ -20,6 +20,7 @@
 #include <uspienv/bcmpropertytags.h>
 #include <uspienv/util.h>
 #include <uspienv/synchronize.h>
+#include <uspienv/bcm2835.h>
 #include <uspienv/assert.h>
 
 typedef struct TPropertyBuffer
@@ -78,7 +79,8 @@ boolean BcmPropertyTagsGetTag (TBcmPropertyTags *pThis, u32 nTagId,
 	InvalidateDataCache ();
 	DataSyncBarrier ();
 
-	if (BcmMailBoxWriteRead (&pThis->m_MailBox, (u32) pBuffer) != (u32) pBuffer)
+	u32 nBufferAddress = GPU_MEM_BASE + (u32) pBuffer;
+	if (BcmMailBoxWriteRead (&pThis->m_MailBox, nBufferAddress) != nBufferAddress)
 	{
 		return FALSE;
 	}

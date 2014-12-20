@@ -25,8 +25,6 @@
 #include <uspios.h>
 #include <uspi/assert.h>
 
-#define MAX_SPLIT_CYCLES	100
-
 void DWHCITransferStageData (TDWHCITransferStageData *pThis, unsigned nChannel, TUSBRequest *pURB, boolean bIn, boolean bStatusStage)
 {
 	assert (pThis != 0);
@@ -36,7 +34,6 @@ void DWHCITransferStageData (TDWHCITransferStageData *pThis, unsigned nChannel, 
 	pThis->m_bIn = bIn;
 	pThis->m_bStatusStage = bStatusStage;
 	pThis->m_bSplitComplete = FALSE;
-	pThis->m_nSplitCycles = MAX_SPLIT_CYCLES;
 	pThis->m_nTotalBytesTransfered = 0;
 	pThis->m_nState = 0;
 	pThis->m_nSubState = 0;
@@ -246,8 +243,7 @@ unsigned DWHCITransferStageDataGetSubState (TDWHCITransferStageData *pThis)
 
 boolean DWHCITransferStageDataBeginSplitCycle (TDWHCITransferStageData *pThis)
 {
-	assert (pThis != 0);
-	return pThis->m_nSplitCycles-- > 0;
+	return TRUE;
 }
 
 unsigned DWHCITransferStageDataGetChannelNumber (TDWHCITransferStageData *pThis)
