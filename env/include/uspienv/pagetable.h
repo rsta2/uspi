@@ -1,8 +1,8 @@
 //
-// alloc.h
+// pagetable.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,36 +17,34 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspienv_alloc_h
-#define _uspienv_alloc_h
+#ifndef _uspienv_pagetable_h
+#define _uspienv_pagetable_h
 
-#define MEM_PAGE_ALLOC
-//#define MEM_DEBUG
+#include <uspienv/armv6mmu.h>
+#include <uspienv/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void mem_init (unsigned long ulBase, unsigned long ulSize);
+typedef struct TPageTable
+{
+	boolean m_bTableAllocated;
+	TARMV6MMU_LEVEL1_SECTION_DESCRIPTOR *m_pTable;
+}
+TPageTable;
 
-unsigned long mem_get_size (void);
+// 4GB shared device
+void PageTable (TPageTable *pThis);
 
-void *malloc (unsigned long ulSize);	// resulting block is always 16 bytes aligned
-void free (void *pBlock);
+// 0..nMemSize: normal,
+// nMemSize..512MB: shared device (1024MB on Raspberry Pi 2)
+void PageTable2 (TPageTable *pThis, u32 nMemSize);
 
-#ifdef MEM_PAGE_ALLOC
+void _PageTable (TPageTable *pThis);
 
-void *palloc (void);		// returns 4K page (aligned)
-void pfree (void *pPage);
-
-#endif
-
-#ifdef MEM_DEBUG
-
-void mem_info (void);
-
-#endif
-
+u32 PageTableGetBaseAddress (TPageTable *pThis);	// with mode bits to be loaded into TTBRn
+	
 #ifdef __cplusplus
 }
 #endif

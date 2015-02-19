@@ -55,9 +55,12 @@ Another option (NDEBUG) can be defined in Rules.mk to build the release version.
 Building
 --------
 
-Building is normally done on PC Linux. You need a [toolchain](http://elinux.org/Rpi_Software#ARM) for the ARM1176JZF core. You can also build and use USPi on the Raspberry Pi itself on Debian wheezy.
+Building is normally done on PC Linux. If building for the Raspberry Pi 1 you need a [toolchain](http://elinux.org/Rpi_Software#ARM) for the ARM1176JZF core. For Raspberry Pi 2 you need a toolchain with Cortex-A7 support. [This one](https://github.com/raspberrypi/tools/tree/master/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64) should work for both. You can also build USPi on the Raspberry Pi itself on Raspbian (Debian wheezy).
 
-First edit the file *Rules.mk* and set the *PREFIX* of your toolchain commands.
+First edit the file *Rules.mk* and set the Raspberry Pi version (*RASPPI*, 1 or 2) and the *PREFIX* of your toolchain commands. Alternatively you can create a *Config.mk* file (which is ignored by git) and set the Raspberry Pi version and the *PREFIX* variable to the prefix of your compiler like this (don't forget the dash at the end):
+
+`RASPPI = 1`  
+`PREFIX = arm-none-eabi-`
 
 Then go to the lib/ directory of USPi and do:
 

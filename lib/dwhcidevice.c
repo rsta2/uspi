@@ -7,7 +7,7 @@
 //	no dynamic attachments
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -860,8 +860,13 @@ void DWHCIDeviceStartChannel (TDWHCIDevice *pThis, TDWHCITransferStageData *pSta
 			DWHCITransferStageDataGetDMAAddress (pStageData) + GPU_MEM_BASE);
 	DWHCIRegisterWrite (&DMAAddress);
 
+#if RASPPI == 1
 	CleanDataCache ();
 	InvalidateDataCache ();
+#else
+	uspi_CleanAndInvalidateDataCacheRange (DWHCITransferStageDataGetDMAAddress (pStageData),
+					       DWHCITransferStageDataGetBytesToTransfer (pStageData));
+#endif
 	DataMemBarrier ();
 
 	// set split control
@@ -968,8 +973,13 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 		return;
 
 	case StageSubStateWaitForTransactionComplete: {
+#if RASPPI == 1
 		CleanDataCache ();
 		InvalidateDataCache ();
+#else
+		uspi_CleanAndInvalidateDataCacheRange (DWHCITransferStageDataGetDMAAddress (pStageData),
+						       DWHCITransferStageDataGetBytesToTransfer (pStageData));
+#endif
 		DataMemBarrier ();
 
 		TDWHCIRegister TransferSize;

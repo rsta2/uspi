@@ -2,7 +2,7 @@
 # Rules.mk
 #
 # USPi - An USB driver for Raspberry Pi written in C
-# Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+# Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,15 +24,23 @@ endif
 
 -include $(USPIHOME)/Config.mk
 
-PREFIX	?= arm-rpi-linux-gnueabi-
+RASPPI	?= 1
+PREFIX	?= arm-linux-gnueabihf-
 
 CC	= $(PREFIX)gcc
 AS	= $(CC)
 LD	= $(PREFIX)ld
 AR	= $(PREFIX)ar
 
-CFLAGS	+= -march=armv6 -mtune=arm1176jzf-s -Wall -Wno-psabi -fsigned-char -fno-builtin -nostdinc -nostdlib \
-	   -std=gnu99 -undef -I $(USPIHOME)/include -O #-DNDEBUG
+ifeq ($(strip $(RASPPI)),1)
+ARCH	?= -march=armv6j -mtune=arm1176jzf-s -mfloat-abi=hard 
+else
+ARCH	?= -march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard
+endif
+
+AFLAGS	+= $(ARCH) -DRASPPI=$(RASPPI)
+CFLAGS	+= $(ARCH) -Wall -Wno-psabi -fsigned-char -fno-builtin -nostdinc -nostdlib \
+	   -std=gnu99 -undef -DRASPPI=$(RASPPI) -I $(USPIHOME)/include -O #-DNDEBUG
 
 %.o: %.S
 	$(AS) $(AFLAGS) -c -o $@ $<

@@ -2,7 +2,7 @@
 // sysconfig.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,19 +29,26 @@
 
 #define PAGE_SIZE		4096				// page size used by us
 
-#define KERNEL_MAX_SIZE		(2 * MEGABYTE)
+#define KERNEL_MAX_SIZE		(2 * MEGABYTE)			// all sizes must be a multiple of 16K
 #define KERNEL_STACK_SIZE	0x20000
 #define EXCEPTION_STACK_SIZE	0x8000
+#define PAGE_TABLE1_SIZE	0x4000
 
 #define MEM_KERNEL_START	0x8000
 #define MEM_KERNEL_END		(MEM_KERNEL_START + KERNEL_MAX_SIZE)
 #define MEM_KERNEL_STACK	(MEM_KERNEL_END + KERNEL_STACK_SIZE)		// expands down
-#define MEM_IRQ_STACK		(MEM_KERNEL_STACK + EXCEPTION_STACK_SIZE)	// expands down
+#define MEM_ABORT_STACK		(MEM_KERNEL_STACK + EXCEPTION_STACK_SIZE)	// expands down
+#define MEM_IRQ_STACK		(MEM_ABORT_STACK + EXCEPTION_STACK_SIZE)	// expands down
+#define MEM_PAGE_TABLE1		MEM_IRQ_STACK				// must be 16K aligned
 
 #define MEM_HEAP_START		0x400000
 
 // system options
+#if RASPPI == 1			// valid on Raspberry Pi 1 only
+//#define ARM_DISABLE_MMU
+#define ARM_STRICT_ALIGNMENT
 #define GPU_L2_CACHE_ENABLED
+#endif
 
 #define KERNEL_TIMERS		20
 

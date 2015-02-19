@@ -2,7 +2,7 @@
 // bcmframebuffer.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -146,7 +146,12 @@ u32 BcmFrameBufferGetDepth (TBcmFrameBuffer *pThis)
 u32 BcmFrameBufferGetBuffer (TBcmFrameBuffer *pThis)
 {
 	assert (pThis != 0);
+
+#if RASPPI == 1
 	return pThis->m_pInfo->BufferPtr;
+#else
+	return pThis->m_pInfo->BufferPtr & 0x3FFFFFFF;
+#endif
 }
 
 u32 BcmFrameBufferGetSize (TBcmFrameBuffer *pThis)

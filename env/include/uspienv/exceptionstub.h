@@ -2,7 +2,7 @@
 // exceptionstub.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -44,8 +44,36 @@ TExceptionTable;
 
 #define ARM_EXCEPTION_TABLE_BASE	0x00000000
 
+typedef struct TAbortFrame
+{
+	u32	sp_irq;
+	u32	lr_irq;
+	u32	r0;
+	u32	r1;
+	u32	r2;
+	u32	r3;
+	u32	r4;
+	u32	r5;
+	u32	r6;
+	u32	r7;
+	u32	r8;
+	u32	r9;
+	u32	r10;
+	u32	r11;
+	u32	r12;
+	u32	sp;
+	u32	lr;
+	u32	spsr;
+	u32	pc;
+}
+TAbortFrame;
+
+void UndefinedInstructionStub (void);
+void PrefetchAbortStub (void);
+void DataAbortStub (void);
 void IRQStub (void);
 
+void ExceptionHandler (u32 nException, TAbortFrame *pFrame);
 void InterruptHandler (void);
 
 #ifdef __cplusplus

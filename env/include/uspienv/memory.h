@@ -1,8 +1,8 @@
 //
-// alloc.h
+// memory.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,35 +17,30 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspienv_alloc_h
-#define _uspienv_alloc_h
+#ifndef _uspienv_memory_h
+#define _uspienv_memory_h
 
-#define MEM_PAGE_ALLOC
-//#define MEM_DEBUG
+#include <uspienv/pagetable.h>
+#include <uspienv/types.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void mem_init (unsigned long ulBase, unsigned long ulSize);
+typedef struct TMemorySystem
+{
+	boolean m_bEnableMMU;
+	u32 m_nMemSize;
 
-unsigned long mem_get_size (void);
+	TPageTable *m_pPageTable0Default;
+	TPageTable *m_pPageTable1;
+}
+TMemorySystem;
 
-void *malloc (unsigned long ulSize);	// resulting block is always 16 bytes aligned
-void free (void *pBlock);
+void MemorySystem (TMemorySystem *pThis, boolean bEnableMMU);
+void _MemorySystem (TMemorySystem *pThis);
 
-#ifdef MEM_PAGE_ALLOC
-
-void *palloc (void);		// returns 4K page (aligned)
-void pfree (void *pPage);
-
-#endif
-
-#ifdef MEM_DEBUG
-
-void mem_info (void);
-
-#endif
+u32 MemorySystemGetMemSize (TMemorySystem *pThis);
 
 #ifdef __cplusplus
 }

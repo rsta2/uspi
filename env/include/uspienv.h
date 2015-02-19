@@ -2,7 +2,7 @@
 // uspienv.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,8 +20,10 @@
 #ifndef _uspienv_h
 #define _uspienv_h
 
+#include <uspienv/memory.h>
 #include <uspienv/screen.h>
 #include <uspienv/logger.h>
+#include <uspienv/exceptionhandler.h>
 #include <uspienv/interrupt.h>
 #include <uspienv/timer.h>
 #include <uspienv/startup.h>
@@ -32,8 +34,10 @@ extern "C" {
 
 typedef struct TUSPiEnv
 {
+	TMemorySystem		m_Memory;
 	TScreenDevice	 	m_Screen;
 	TLogger		 	m_Logger;
+	TExceptionHandler	m_ExceptionHandler;
 	TInterruptSystem	m_Interrupt;
 	TTimer			m_Timer;
 }

@@ -1,8 +1,8 @@
 //
-// alloc.h
+// exceptionhandler.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,35 +17,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspienv_alloc_h
-#define _uspienv_alloc_h
+#ifndef _uspienv_exceptionhandler_h
+#define _uspienv_exceptionhandler_h
 
-#define MEM_PAGE_ALLOC
-//#define MEM_DEBUG
+#include <uspienv/exception.h>
+#include <uspienv/exceptionstub.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void mem_init (unsigned long ulBase, unsigned long ulSize);
+typedef struct TExceptionHandler
+{
+}
+TExceptionHandler;
 
-unsigned long mem_get_size (void);
+void ExceptionHandler2 (TExceptionHandler *pThis);
+void _ExceptionHandler (TExceptionHandler *pThis);
 
-void *malloc (unsigned long ulSize);	// resulting block is always 16 bytes aligned
-void free (void *pBlock);
+void ExceptionHandlerThrow (TExceptionHandler *pThis, unsigned nException);
 
-#ifdef MEM_PAGE_ALLOC
+void ExceptionHandlerThrow2 (TExceptionHandler *pThis, unsigned nException, TAbortFrame *pFrame);
 
-void *palloc (void);		// returns 4K page (aligned)
-void pfree (void *pPage);
-
-#endif
-
-#ifdef MEM_DEBUG
-
-void mem_info (void);
-
-#endif
+TExceptionHandler *ExceptionHandlerGet (void);
 
 #ifdef __cplusplus
 }

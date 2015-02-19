@@ -2,7 +2,7 @@
 // libhelper.cpp
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include <uspienv/assert.h>
-#include <uspienv/logger.h>
+#include <uspienv/exceptionhandler.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +29,7 @@ unsigned Divide (unsigned nDividend, unsigned nDivisor, unsigned *pRest)
 	if (nDivisor == 0)
 	{
 		assert (0);
-		LoggerWrite (LoggerGet (), "libhelper", LogPanic, "Division by 0");
+		ExceptionHandlerThrow (ExceptionHandlerGet (), EXCEPTION_DIVISION_BY_ZERO);
 	}
 	
 	unsigned long long ullDivisor = nDivisor;

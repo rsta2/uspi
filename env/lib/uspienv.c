@@ -2,7 +2,7 @@
 // uspienv.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,61 +18,40 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include <uspienv.h>
-#include <uspienv/bcmpropertytags.h>
-#include <uspienv/alloc.h>
-#include <uspienv/assert.h>
+#include <uspienv/sysconfig.h>
 
-static TUSPiEnv *s_pEnv = 0;
+static TUSPiEnv s_Env;
 
 int USPiEnvInitialize (void)
 {
-	TBcmPropertyTags Tags;
-	BcmPropertyTags (&Tags);
-	TPropertyTagMemory TagMemory;
-	if (!BcmPropertyTagsGetTag (&Tags, PROPTAG_GET_ARM_MEMORY, &TagMemory, sizeof TagMemory, 0))
-	{
-		TagMemory.nBaseAddress = 0;
-		TagMemory.nSize = ARM_MEM_SIZE;
-	}
+#ifdef ARM_DISABLE_MMU
+	MemorySystem (&s_Env.m_Memory, FALSE);
+#else
+	MemorySystem (&s_Env.m_Memory, TRUE);
+#endif
 
-	mem_init (TagMemory.nBaseAddress, TagMemory.nSize);
-
-	s_pEnv = (TUSPiEnv *) malloc (sizeof (TUSPiEnv));
-	if (s_pEnv == 0)
+	ScreenDevice (&s_Env.m_Screen, 0, 0);
+	if (!ScreenDeviceInitialize (&s_Env.m_Screen))
 	{
-		_BcmPropertyTags (&Tags);
+		_ScreenDevice (&s_Env.m_Screen);
 
 		return 0;
 	}
 
-	ScreenDevice (&s_pEnv->m_Screen, 0, 0);
-	if (!ScreenDeviceInitialize (&s_pEnv->m_Screen))
+	ExceptionHandler2 (&s_Env.m_ExceptionHandler);
+	InterruptSystem (&s_Env.m_Interrupt);
+	Timer (&s_Env.m_Timer, &s_Env.m_Interrupt);
+	Logger (&s_Env.m_Logger, LogDebug, &s_Env.m_Timer);
+
+	if (   !LoggerInitialize (&s_Env.m_Logger, &s_Env.m_Screen)
+	    || !InterruptSystemInitialize (&s_Env.m_Interrupt)
+	    || !TimerInitialize (&s_Env.m_Timer))
 	{
-		_ScreenDevice (&s_pEnv->m_Screen);
-		_BcmPropertyTags (&Tags);
-
-		free (s_pEnv);
-		s_pEnv = 0;
-
-		return 0;
-	}
-
-	InterruptSystem (&s_pEnv->m_Interrupt);
-	Timer (&s_pEnv->m_Timer, &s_pEnv->m_Interrupt);
-	Logger (&s_pEnv->m_Logger, LogDebug, &s_pEnv->m_Timer);
-
-	if (   !LoggerInitialize (&s_pEnv->m_Logger, &s_pEnv->m_Screen)
-	    || !InterruptSystemInitialize (&s_pEnv->m_Interrupt)
-	    || !TimerInitialize (&s_pEnv->m_Timer))
-	{
-		_Logger (&s_pEnv->m_Logger);
-		_Timer (&s_pEnv->m_Timer);
-		_InterruptSystem (&s_pEnv->m_Interrupt);
-		_ScreenDevice (&s_pEnv->m_Screen);
-		_BcmPropertyTags (&Tags);
-
-		free (s_pEnv);
-		s_pEnv = 0;
+		_Logger (&s_Env.m_Logger);
+		_Timer (&s_Env.m_Timer);
+		_InterruptSystem (&s_Env.m_Interrupt);
+		_ExceptionHandler (&s_Env.m_ExceptionHandler);
+		_ScreenDevice (&s_Env.m_Screen);
 
 		return 0;
 	}
@@ -82,17 +61,14 @@ int USPiEnvInitialize (void)
 
 void USPiEnvClose (void)
 {
-	_Logger (&s_pEnv->m_Logger);
-	_Timer (&s_pEnv->m_Timer);
-	_InterruptSystem (&s_pEnv->m_Interrupt);
-	_ScreenDevice (&s_pEnv->m_Screen);
-
-	free (s_pEnv);
-	s_pEnv = 0;
+	_Logger (&s_Env.m_Logger);
+	_Timer (&s_Env.m_Timer);
+	_InterruptSystem (&s_Env.m_Interrupt);
+	_ExceptionHandler (&s_Env.m_ExceptionHandler);
+	_ScreenDevice (&s_Env.m_Screen);
 }
 
 TScreenDevice *USPiEnvGetScreen (void)
 {
-	assert (s_pEnv != 0);
-	return &s_pEnv->m_Screen;
+	return &s_Env.m_Screen;
 }

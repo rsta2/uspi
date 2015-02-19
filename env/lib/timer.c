@@ -2,7 +2,7 @@
 // timer.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <uspienv/bcm2835.h>
 #include <uspienv/memio.h>
 #include <uspienv/synchronize.h>
+#include <uspienv/sysconfig.h>
 #include <uspienv/alloc.h>
 #include <uspienv/logger.h>
 #include <uspienv/debug.h>
@@ -40,7 +41,11 @@ void Timer (TTimer *pThis, TInterruptSystem *pInterruptSystem)
 	pThis->m_pInterruptSystem = pInterruptSystem;
 	pThis->m_nTicks = 0;
 	pThis->m_nTime = 0;
+#ifdef ARM_DISABLE_MMU
 	pThis->m_nMsDelay = 12500;
+#else
+	pThis->m_nMsDelay = 350000;
+#endif
 	pThis->m_nusDelay = pThis->m_nMsDelay / 1000;
 
 	assert (s_pThis == 0);
@@ -115,7 +120,7 @@ TString *TimerGetTimeString (TTimer *pThis)
 
 	LeaveCritical ();
 
-	if (nTime == 0)
+	if (nTicks == 0)
 	{
 		return 0;
 	}

@@ -1,8 +1,8 @@
 //
-// alloc.h
+// exception.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,38 +17,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspienv_alloc_h
-#define _uspienv_alloc_h
+#ifndef _uspienv_exception_h
+#define _uspienv_exception_h
 
-#define MEM_PAGE_ALLOC
-//#define MEM_DEBUG
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void mem_init (unsigned long ulBase, unsigned long ulSize);
-
-unsigned long mem_get_size (void);
-
-void *malloc (unsigned long ulSize);	// resulting block is always 16 bytes aligned
-void free (void *pBlock);
-
-#ifdef MEM_PAGE_ALLOC
-
-void *palloc (void);		// returns 4K page (aligned)
-void pfree (void *pPage);
-
-#endif
-
-#ifdef MEM_DEBUG
-
-void mem_info (void);
-
-#endif
-
-#ifdef __cplusplus
-}
-#endif
+#define EXCEPTION_DIVISION_BY_ZERO		0
+#define EXCEPTION_UNDEFINED_INSTRUCTION		1
+#define EXCEPTION_PREFETCH_ABORT		2
+#define EXCEPTION_DATA_ABORT			3
 
 #endif
