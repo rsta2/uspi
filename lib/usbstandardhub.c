@@ -157,15 +157,18 @@ boolean USBStandardHubConfigure (TUSBDevice *pUSBDevice)
 
 	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
 	assert (pHost != 0);
-	
-	if (DWHCIDeviceControlMessage (pHost, USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
-					REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
-					pInterfaceDesc->bAlternateSetting,
-					pInterfaceDesc->bInterfaceNumber, 0, 0) < 0)
-	{
-		LogWrite (FromHub, LOG_ERROR, "Cannot set interface");
 
-		return FALSE;
+	if (pInterfaceDesc->bAlternateSetting != 0)
+	{
+		if (DWHCIDeviceControlMessage (pHost, USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+						REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
+						pInterfaceDesc->bAlternateSetting,
+						pInterfaceDesc->bInterfaceNumber, 0, 0) < 0)
+		{
+			LogWrite (FromHub, LOG_ERROR, "Cannot set interface");
+
+			return FALSE;
+		}
 	}
 
 	assert (pThis->m_pHubDesc == 0);

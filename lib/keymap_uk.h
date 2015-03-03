@@ -31,7 +31,7 @@
 {'z',		'Z',		KeyNone},	// 0x1D
 {'1',		'!',		KeyNone},	// 0x1E
 {'2',		'\"',		KeyNone},	// 0x1F
-{'3',		KeyNone,	KeyNone},	// 0x20
+{'3',		'#',		KeyNone},	// 0x20
 {'4',		'$',		KeyNone},	// 0x21
 {'5',		'%',		KeyNone},	// 0x22
 {'6',		'^',		KeyNone},	// 0x23
@@ -48,7 +48,7 @@
 {'=',		'+',		KeyNone},	// 0x2E
 {'[',		'{',		KeyNone},	// 0x2F
 {']',		'}',		KeyNone},	// 0x30
-{'\\',		'|',		KeyNone},	// 0x31
+{'#',		'~',		KeyNone},	// 0x31
 {'#',		'~',		KeyNone},	// 0x32
 {';',		':',		KeyNone},	// 0x33
 {'\'',		'@',		KeyNone},	// 0x34

@@ -148,15 +148,18 @@ boolean USBKeyboardDeviceConfigure (TUSBDevice *pUSBDevice)
 		return FALSE;
 	}
 
-	if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-				       USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
-				       REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
-				       pThis->m_ucAlternateSetting,
-				       pThis->m_ucInterfaceNumber, 0, 0) < 0)
+	if (pThis->m_ucAlternateSetting != 0)
 	{
-		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set interface");
+		if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
+					USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+					REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
+					pThis->m_ucAlternateSetting,
+					pThis->m_ucInterfaceNumber, 0, 0) < 0)
+		{
+			LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set interface");
 
-		return FALSE;
+			return FALSE;
+		}
 	}
 
 	if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),

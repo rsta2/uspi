@@ -441,15 +441,18 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
         return FALSE;
     }
 
-    if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-                       USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
-                       REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
-                       pThis->m_ucAlternateSetting,
-                       pThis->m_ucInterfaceNumber, 0, 0) < 0)
+    if (pThis->m_ucAlternateSetting != 0)
     {
-        LogWrite (FromUSBPad, LOG_ERROR, "Cannot set interface");
+        if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
+                        USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+                        REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
+                        pThis->m_ucAlternateSetting,
+                        pThis->m_ucInterfaceNumber, 0, 0) < 0)
+        {
+            LogWrite (FromUSBPad, LOG_ERROR, "Cannot set interface");
 
-        return FALSE;
+            return FALSE;
+        }
     }
 
     pThis->m_nDeviceIndex = s_nDeviceNumber++;
