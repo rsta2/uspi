@@ -2,7 +2,7 @@
 // startup.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,6 +29,10 @@ extern "C" {
 
 void halt (void);
 void reboot (void);
+
+#if RASPPI != 1
+void _start_secondary (void);
+#endif
 
 #ifdef __cplusplus
 }

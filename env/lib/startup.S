@@ -11,4 +11,14 @@ _start:
 	mov	sp, #MEM_KERNEL_STACK
 	b	sysinit
 
+#if RASPPI != 1
+	
+	.globl	_start_secondary
+_start_secondary:
+	dsb
+1:	wfi
+	b	1b
+
+#endif
+
 /* End */

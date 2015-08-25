@@ -20,7 +20,10 @@
 #include <uspienv/startup.h>
 #include <uspienv/memio.h>
 #include <uspienv/bcm2835.h>
+#include <uspienv/bcm2836.h>
 #include <uspienv/synchronize.h>
+#include <uspienv/sysconfig.h>
+#include <uspienv/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,6 +53,12 @@ void sysinit (void)
 #if RASPPI != 1
 	// L1 data cache may contain random entries after reset, delete them
 	InvalidateDataCache ();
+
+	// put all secondary cores to sleep
+	for (unsigned nCore = 1; nCore < CORES; nCore++)
+	{
+		write32 (ARM_LOCAL_MAILBOX3_SET0 + 0x10 * nCore, (u32) &_start_secondary);
+	}
 #endif
 
 	// clear BSS

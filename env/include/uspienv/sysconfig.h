@@ -48,6 +48,8 @@
 //#define ARM_DISABLE_MMU
 #define ARM_STRICT_ALIGNMENT
 #define GPU_L2_CACHE_ENABLED
+#else
+#define CORES			4					// must be a power of 2
 #endif
 
 #define KERNEL_TIMERS		20
