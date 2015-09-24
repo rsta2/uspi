@@ -42,6 +42,15 @@ void BcmFrameBuffer (TBcmFrameBuffer *pThis, unsigned nWidth, unsigned nHeight, 
 		{
 			nWidth  = Dimensions.nWidth;
 			nHeight = Dimensions.nHeight;
+
+			if (   nWidth  < 640
+			    || nWidth  > 1920
+			    || nHeight < 480
+			    || nHeight > 1080)
+			{
+				nWidth  = 640;
+				nHeight = 480;
+			}
 		}
 		else
 		{
