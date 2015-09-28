@@ -46,6 +46,8 @@ void uspi_LeaveCritical (void);		// enable interrupts (nested calls possible)
 #define InvalidateDataCache()	__asm volatile ("mcr p15, 0, %0, c7, c6,  0" : : "r" (0) : "memory")
 #define CleanDataCache()	__asm volatile ("mcr p15, 0, %0, c7, c10, 0" : : "r" (0) : "memory")
 
+void uspi_CleanAndInvalidateDataCacheRange (u32 nAddress, u32 nLength) MAXOPT;
+
 //
 // Barriers
 //

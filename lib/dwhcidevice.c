@@ -860,13 +860,8 @@ void DWHCIDeviceStartChannel (TDWHCIDevice *pThis, TDWHCITransferStageData *pSta
 			DWHCITransferStageDataGetDMAAddress (pStageData) + GPU_MEM_BASE);
 	DWHCIRegisterWrite (&DMAAddress);
 
-#if RASPPI == 1
-	CleanDataCache ();
-	InvalidateDataCache ();
-#else
 	uspi_CleanAndInvalidateDataCacheRange (DWHCITransferStageDataGetDMAAddress (pStageData),
 					       DWHCITransferStageDataGetBytesToTransfer (pStageData));
-#endif
 	DataMemBarrier ();
 
 	// set split control
@@ -973,13 +968,8 @@ void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel)
 		return;
 
 	case StageSubStateWaitForTransactionComplete: {
-#if RASPPI == 1
-		CleanDataCache ();
-		InvalidateDataCache ();
-#else
 		uspi_CleanAndInvalidateDataCacheRange (DWHCITransferStageDataGetDMAAddress (pStageData),
 						       DWHCITransferStageDataGetBytesToTransfer (pStageData));
-#endif
 		DataMemBarrier ();
 
 		TDWHCIRegister TransferSize;
