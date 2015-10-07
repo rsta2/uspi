@@ -155,12 +155,7 @@ u32 BcmFrameBufferGetDepth (TBcmFrameBuffer *pThis)
 u32 BcmFrameBufferGetBuffer (TBcmFrameBuffer *pThis)
 {
 	assert (pThis != 0);
-
-#if RASPPI == 1
-	return pThis->m_pInfo->BufferPtr;
-#else
 	return pThis->m_pInfo->BufferPtr & 0x3FFFFFFF;
-#endif
 }
 
 u32 BcmFrameBufferGetSize (TBcmFrameBuffer *pThis)
