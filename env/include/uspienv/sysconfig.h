@@ -2,7 +2,7 @@
 // sysconfig.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -41,7 +41,13 @@
 #define MEM_IRQ_STACK		(MEM_ABORT_STACK + EXCEPTION_STACK_SIZE)	// expands down
 #define MEM_PAGE_TABLE1		MEM_IRQ_STACK				// must be 16K aligned
 
+// On Raspberry Pi 3 we need a coherent memory region (1 section) for the property mailbox.
+#if RASPPI == 3
+#define MEM_COHERENT_REGION	0x400000
+#define MEM_HEAP_START		0x500000
+#else
 #define MEM_HEAP_START		0x400000
+#endif
 
 // system options
 #if RASPPI == 1			// valid on Raspberry Pi 1 only

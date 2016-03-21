@@ -21,7 +21,7 @@
 #ifndef _uspienv_bcm2836_h
 #define _uspienv_bcm2836_h
 
-#if RASPPI == 2
+#if RASPPI >= 2
 
 #define ARM_LOCAL_BASE			0x40000000
 

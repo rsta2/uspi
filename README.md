@@ -55,9 +55,9 @@ Another option (NDEBUG) can be defined in Rules.mk to build the release version.
 Building
 --------
 
-Building is normally done on PC Linux. If building for the Raspberry Pi 1 you need a [toolchain](http://elinux.org/Rpi_Software#ARM) for the ARM1176JZF core. For Raspberry Pi 2 you need a toolchain with Cortex-A7 support. [This one](https://github.com/raspberrypi/tools/tree/master/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64) should work for both. You can also build USPi on the Raspberry Pi itself on Raspbian.
+Building is normally done on PC Linux. If building for the Raspberry Pi 1 you need a [toolchain](http://elinux.org/Rpi_Software#ARM) for the ARM1176JZF core. For Raspberry Pi 2/3 you need a toolchain with Cortex-A7/-A53 support. [This one](https://github.com/raspberrypi/tools/tree/master/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64) should work for all of these. You can also build USPi on the Raspberry Pi itself on Raspbian.
 
-First edit the file *Rules.mk* and set the Raspberry Pi version (*RASPPI*, 1 or 2) and the *PREFIX* of your toolchain commands. Alternatively you can create a *Config.mk* file (which is ignored by git) and set the Raspberry Pi version and the *PREFIX* variable to the prefix of your compiler like this (don't forget the dash at the end):
+First edit the file *Rules.mk* and set the Raspberry Pi version (*RASPPI*, 1, 2 or 3) and the *PREFIX* of your toolchain commands. Alternatively you can create a *Config.mk* file (which is ignored by git) and set the Raspberry Pi version and the *PREFIX* variable to the prefix of your compiler like this (don't forget the dash at the end):
 
 `RASPPI = 1`  
 `PREFIX = arm-none-eabi-`

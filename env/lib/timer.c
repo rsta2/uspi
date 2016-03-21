@@ -164,6 +164,8 @@ unsigned TimerStartKernelTimer (TTimer *pThis, unsigned nDelay, TKernelTimerHand
 	{
 		LeaveCritical ();
 
+		LoggerWrite (LoggerGet (), "timer", LogPanic, "System limit of kernel timers exceeded");
+
 		return 0;
 	}
 

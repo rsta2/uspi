@@ -2,7 +2,7 @@
 # Rules.mk
 #
 # USPi - An USB driver for Raspberry Pi written in C
-# Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+# Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -34,8 +34,10 @@ AR	= $(PREFIX)ar
 
 ifeq ($(strip $(RASPPI)),1)
 ARCH	?= -march=armv6j -mtune=arm1176jzf-s -mfloat-abi=hard 
-else
+else ifeq ($(strip $(RASPPI)),2)
 ARCH	?= -march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard
+else
+ARCH	?= -march=armv7-a -mtune=cortex-a53 -mfloat-abi=hard
 endif
 
 AFLAGS	+= $(ARCH) -DRASPPI=$(RASPPI)

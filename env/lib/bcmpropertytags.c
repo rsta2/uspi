@@ -2,7 +2,7 @@
 // bcmpropertytags.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 #include <uspienv/util.h>
 #include <uspienv/synchronize.h>
 #include <uspienv/bcm2835.h>
+#include <uspienv/sysconfig.h>
 #include <uspienv/assert.h>
 
 typedef struct TPropertyBuffer
@@ -59,9 +60,13 @@ boolean BcmPropertyTagsGetTag (TBcmPropertyTags *pThis, u32 nTagId,
 	unsigned nBufferSize = sizeof (TPropertyBuffer) + nTagSize + sizeof (u32);
 	assert ((nBufferSize & 3) == 0);
 
+#if RASPPI != 3
 	// cannot use malloc() here because this is used before mem_init() is called
 	u8 Buffer[nBufferSize + 15];
 	TPropertyBuffer *pBuffer = (TPropertyBuffer *) (((u32) Buffer + 15) & ~15);
+#else
+	TPropertyBuffer *pBuffer = (TPropertyBuffer *) MEM_COHERENT_REGION;
+#endif
 	
 	pBuffer->nBufferSize = nBufferSize;
 	pBuffer->nCode = CODE_REQUEST;
@@ -75,8 +80,10 @@ boolean BcmPropertyTagsGetTag (TBcmPropertyTags *pThis, u32 nTagId,
 	u32 *pEndTag = (u32 *) (pBuffer->Tags + nTagSize);
 	*pEndTag = PROPTAG_END;
 
+#if RASPPI != 3
 	CleanDataCache ();
 	DataSyncBarrier ();
+#endif
 
 	u32 nBufferAddress = GPU_MEM_BASE + (u32) pBuffer;
 	if (BcmMailBoxWriteRead (&pThis->m_MailBox, nBufferAddress) != nBufferAddress)
@@ -84,8 +91,12 @@ boolean BcmPropertyTagsGetTag (TBcmPropertyTags *pThis, u32 nTagId,
 		return FALSE;
 	}
 	
+#if RASPPI != 3
 	InvalidateDataCache ();
 	DataSyncBarrier ();
+#else
+	DataMemBarrier ();
+#endif
 
 	if (pBuffer->nCode != CODE_RESPONSE_SUCCESS)
 	{

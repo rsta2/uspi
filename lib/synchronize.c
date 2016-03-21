@@ -99,7 +99,8 @@ void uspi_CleanAndInvalidateDataCacheRange (u32 nAddress, u32 nLength)
 //	 ensured using the register keyword and maximum optimation (see uspi/synchronize.h).
 //
 //	 The following numbers can be determined (dynamically) using CTR, CSSELR, CCSIDR and CLIDR.
-//	 As long we use the Cortex-A7 implementation in the BCM2836 these static values will work:
+//	 As long we use the Cortex-A7 implementation in the BCM2836 or the Cortex-A53 implementation
+//	 in the BCM2837 these static values will work:
 //
 
 #define L1_DATA_CACHE_LINE_LENGTH	64
