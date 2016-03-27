@@ -37,7 +37,7 @@ ARCH	?= -march=armv6j -mtune=arm1176jzf-s -mfloat-abi=hard
 else ifeq ($(strip $(RASPPI)),2)
 ARCH	?= -march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard
 else
-ARCH	?= -march=armv7-a -mtune=cortex-a53 -mfloat-abi=hard
+ARCH	?= -march=armv8-a -mtune=cortex-a53 -mfloat-abi=hard
 endif
 
 AFLAGS	+= $(ARCH) -DRASPPI=$(RASPPI)
