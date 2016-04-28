@@ -114,11 +114,12 @@ boolean ScreenDeviceInitialize (TScreenDevice *pThis)
 	pThis->m_nWidth  = BcmFrameBufferGetWidth (pThis->m_pFrameBuffer);
 	pThis->m_nHeight = BcmFrameBufferGetHeight (pThis->m_pFrameBuffer);
 
-	// Makes things easier and is normally the case
-	if (BcmFrameBufferGetPitch (pThis->m_pFrameBuffer) != pThis->m_nWidth * sizeof (TScreenColor))
+	// Ensure that each row is word-aligned so that we can safely use memcpyblk()
+	if (BcmFrameBufferGetPitch (pThis->m_pFrameBuffer) % sizeof (u32) != 0)
 	{
 		return FALSE;
 	}
+	pThis->m_nPitch = BcmFrameBufferGetPitch (pThis->m_pFrameBuffer) / sizeof (TScreenColor);
 
 	pThis->m_nUsedHeight =   pThis->m_nHeight
 			       / CharGeneratorGetCharHeight (&pThis->m_CharGen)
@@ -167,7 +168,7 @@ void ScreenDeviceSetPixel (TScreenDevice *pThis, unsigned nPosX, unsigned nPosY,
 	if (   nPosX < pThis->m_nWidth
 	    && nPosY < pThis->m_nHeight)
 	{
-		pThis->m_pBuffer[pThis->m_nWidth * nPosY + nPosX] = Color;
+		pThis->m_pBuffer[pThis->m_nPitch * nPosY + nPosX] = Color;
 	}
 }
 
@@ -176,7 +177,7 @@ TScreenColor ScreenDeviceGetPixel (TScreenDevice *pThis, unsigned nPosX, unsigne
 	if (   nPosX < pThis->m_nWidth
 	    && nPosY < pThis->m_nHeight)
 	{
-		return pThis->m_pBuffer[pThis->m_nWidth * nPosY + nPosX];
+		return pThis->m_pBuffer[pThis->m_nPitch * nPosY + nPosX];
 	}
 	
 	return BLACK_COLOR;
@@ -469,7 +470,7 @@ void ScreenDeviceClearDisplayEnd (TScreenDevice *pThis)
 	ScreenDeviceClearLineEnd (pThis);
 	
 	unsigned nPosY = pThis->m_nCursorY + CharGeneratorGetCharHeight (&pThis->m_CharGen);
-	unsigned nOffset = nPosY * pThis->m_nWidth;
+	unsigned nOffset = nPosY * pThis->m_nPitch;
 	
 	TScreenColor *pBuffer = pThis->m_pBuffer + nOffset;
 	unsigned nSize = pThis->m_nSize / sizeof (TScreenColor) - nOffset;
@@ -660,14 +661,17 @@ void ScreenDeviceScroll (TScreenDevice *pThis)
 	unsigned nLines = CharGeneratorGetCharHeight (&pThis->m_CharGen);
 
 	u32 *pTo = (u32 *) pThis->m_pBuffer;
-	u32 *pFrom = (u32 *) (pThis->m_pBuffer + nLines * pThis->m_nWidth);
+	u32 *pFrom = (u32 *) (pThis->m_pBuffer + nLines * pThis->m_nPitch);
 
-	unsigned nSize = pThis->m_nWidth * (pThis->m_nUsedHeight - nLines) * sizeof (TScreenColor);
+	unsigned nSize = pThis->m_nPitch * (pThis->m_nUsedHeight - nLines) * sizeof (TScreenColor);
+	unsigned nSizeBlk = nSize & ~0xFF;
 
-	memcpyblk (pTo, pFrom, nSize);
+	memcpyblk (pTo, pFrom, nSizeBlk);
+	// Handle framebuffers with row lengths not aligned to 16 bytes
+	memcpy ((char *)pTo + nSizeBlk, (char *)pFrom + nSizeBlk, nSize & 0xFF);
 	pTo += nSize / sizeof (u32);
 
-	nSize = pThis->m_nWidth * nLines * sizeof (TScreenColor) / sizeof (u32);
+	nSize = pThis->m_nPitch * nLines * sizeof (TScreenColor) / sizeof (u32);
 	while (nSize--)
 	{
 		*pTo++ = BLACK_COLOR;
