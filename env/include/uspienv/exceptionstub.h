@@ -2,7 +2,7 @@
 // exceptionstub.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ extern "C" {
 
 typedef struct TExceptionTable
 {
-	u32 Reset;
+	//u32 Reset;
 	u32 UndefinedInstruction;
 	u32 SupervisorCall;
 	u32 PrefetchAbort;
@@ -42,7 +42,7 @@ typedef struct TExceptionTable
 }
 TExceptionTable;
 
-#define ARM_EXCEPTION_TABLE_BASE	0x00000000
+#define ARM_EXCEPTION_TABLE_BASE	0x00000004
 
 typedef struct TAbortFrame
 {
