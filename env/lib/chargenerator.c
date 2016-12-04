@@ -2,7 +2,7 @@
 // chargenerator.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -23,8 +23,8 @@
 
 #undef GIMP_HEADER			// if font saved with GIMP with .h extension
 
-#define FIRSTCHAR	'!'
-#define LASTCHAR	'~'
+#define FIRSTCHAR	0x21
+#define LASTCHAR	0xFF
 #define CHARCOUNT	(LASTCHAR - FIRSTCHAR + 1)
 
 void CharGenerator (TCharGenerator *pThis)
@@ -74,13 +74,14 @@ boolean CharGeneratorGetPixel (TCharGenerator *pThis, char chAscii, unsigned nPo
 {
 	assert (pThis != 0);
 
-	if (   chAscii < FIRSTCHAR
-	    || chAscii > LASTCHAR)
+	unsigned nAscii = (u8) chAscii;
+	if (   nAscii < FIRSTCHAR
+	    || nAscii > LASTCHAR)
 	{
 		return FALSE;
 	}
 
-	unsigned nIndex = chAscii - FIRSTCHAR;
+	unsigned nIndex = nAscii - FIRSTCHAR;
 	assert (nIndex < CHARCOUNT);
 
 	assert (nPosX < pThis->m_nCharWidth);

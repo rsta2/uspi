@@ -2,7 +2,7 @@
 // screen.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -564,7 +564,7 @@ void ScreenDeviceDisplayChar (TScreenDevice *pThis, char chChar)
 {
 	// TODO: Insert mode
 	
-	if (' ' <= chChar && chChar <= '~')
+	if (' ' <= (unsigned char) chChar)
 	{
 		ScreenDeviceDisplayChar2 (pThis, chChar, pThis->m_nCursorX, pThis->m_nCursorY, pThis->m_Color);
 

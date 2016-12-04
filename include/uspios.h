@@ -4,7 +4,7 @@
 // External functions used by the USPi library
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -36,8 +36,12 @@ extern "C" {
 #define HZ	100			// timer ticks / second (set this to your timer interrupt frequency)
 
 // Default keyboard map (enable only one)
-#define USPI_DEFAULT_KEYMAP_UK
 //#define USPI_DEFAULT_KEYMAP_DE
+//#define USPI_DEFAULT_KEYMAP_ES
+//#define USPI_DEFAULT_KEYMAP_FR
+//#define USPI_DEFAULT_KEYMAP_IT
+#define USPI_DEFAULT_KEYMAP_UK
+//#define USPI_DEFAULT_KEYMAP_US
 
 // Undefine this if you want to use your own implementation of the functions in uspi/util.h
 #define USPI_PROVIDE_MEM_FUNCTIONS	// mem*()

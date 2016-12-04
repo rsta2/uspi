@@ -419,10 +419,12 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
     pThis->m_pHIDReportDescriptor = (unsigned char *) malloc(pHIDDesc->wReportDescriptorLength);
     assert (pThis->m_pHIDReportDescriptor != 0);
 
-    if (DWHCIDeviceGetDescriptor (USBDeviceGetHost (&pThis->m_USBDevice),
+    if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
                     USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
-                    pHIDDesc->bReportDescriptorType, DESCRIPTOR_INDEX_DEFAULT,
-                    pThis->m_pHIDReportDescriptor, pHIDDesc->wReportDescriptorLength, REQUEST_IN)
+                    REQUEST_IN | REQUEST_TO_INTERFACE, GET_DESCRIPTOR,
+                    (pHIDDesc->bReportDescriptorType << 8) | DESCRIPTOR_INDEX_DEFAULT,
+                    pThis->m_ucInterfaceNumber,
+                    pThis->m_pHIDReportDescriptor, pHIDDesc->wReportDescriptorLength)
         != pHIDDesc->wReportDescriptorLength)
     {
         LogWrite (FromUSBPad, LOG_ERROR, "Cannot get HID report descriptor");

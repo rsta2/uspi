@@ -2,7 +2,7 @@
 // usbkeyboard.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -219,9 +219,9 @@ void USBKeyboardDeviceGenerateKeyEvent (TUSBKeyboardDevice *pThis, u8 ucPhyCode)
 	char Buffer[2];
 
 	u8 ucModifiers = USBKeyboardDeviceGetModifiers (pThis);
-	u8 ucLogCode = KeyMapTranslate (&pThis->m_KeyMap, ucPhyCode, ucModifiers);
+	u16 usLogCode = KeyMapTranslate (&pThis->m_KeyMap, ucPhyCode, ucModifiers);
 
-	switch (ucLogCode)
+	switch (usLogCode)
 	{
 	case ActionSwitchCapsLock:
 	case ActionSwitchNumLock:
@@ -242,7 +242,7 @@ void USBKeyboardDeviceGenerateKeyEvent (TUSBKeyboardDevice *pThis, u8 ucPhyCode)
 	case ActionSelectConsole12:
 		if (pThis->m_pSelectConsoleHandler != 0)
 		{
-			unsigned nConsole = ucLogCode - ActionSelectConsole1;
+			unsigned nConsole = usLogCode - ActionSelectConsole1;
 			assert (nConsole < 12);
 
 			(*pThis->m_pSelectConsoleHandler) (nConsole);
@@ -257,7 +257,7 @@ void USBKeyboardDeviceGenerateKeyEvent (TUSBKeyboardDevice *pThis, u8 ucPhyCode)
 		break;
 
 	default:
-		pKeyString = KeyMapGetString (&pThis->m_KeyMap, ucLogCode, ucModifiers, Buffer);
+		pKeyString = KeyMapGetString (&pThis->m_KeyMap, usLogCode, ucModifiers, Buffer);
 		if (pKeyString != 0)
 		{
 			if (pThis->m_pKeyPressedHandler != 0)

@@ -2,7 +2,7 @@
 // keymap.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,11 +27,12 @@
 #define K_NORMTAB	0
 #define K_SHIFTTAB	1
 #define K_ALTTAB	2
+#define K_ALTSHIFTTAB	3
 
 typedef enum
 {
 	KeyNone  = 0x00,
-	KeySpace = 0x80,
+	KeySpace = 0x100,
 	KeyEscape,
 	KeyBackspace,
 	KeyTabulator,
@@ -110,7 +111,7 @@ TSpecialAction;
 
 typedef struct TKeyMap
 {
-	u8 m_KeyMap[PHY_MAX_CODE+1][K_ALTTAB+1];
+	u16 m_KeyMap[PHY_MAX_CODE+1][K_ALTSHIFTTAB+1];
 
 	boolean m_bCapsLock;
 	boolean m_bNumLock;
@@ -122,10 +123,10 @@ void KeyMap (TKeyMap *pThis);
 void _KeyMap (TKeyMap *pThis);
 
 boolean KeyMapClearTable (TKeyMap *pThis, u8 nTable);
-boolean KeyMapSetEntry (TKeyMap *pThis, u8 nTable, u8 nPhyCode, u8 nValue);
+boolean KeyMapSetEntry (TKeyMap *pThis, u8 nTable, u8 nPhyCode, u16 nValue);
 
-u8 KeyMapTranslate (TKeyMap *pThis, u8 nPhyCode, u8 nModifiers);
-const char *KeyMapGetString (TKeyMap *pThis, u8 nKeyCode, u8 nModifiers, char Buffer[2]);
+u16 KeyMapTranslate (TKeyMap *pThis, u8 nPhyCode, u8 nModifiers);
+const char *KeyMapGetString (TKeyMap *pThis, u16 nKeyCode, u8 nModifiers, char Buffer[2]);
 
 u8 KeyMapGetLEDStatus (TKeyMap *pThis);
 

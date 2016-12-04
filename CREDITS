@@ -9,3 +9,7 @@ Various advice and testing in other parts
 
 Jose Luis Sanchez
 Testing while fixing an USB freeze bug (taken from Circle)
+Spanish keymap (taken from Circle)
+
+Joshua Otto
+Providing support for framebuffers where pitch != width * bytes per pixel
