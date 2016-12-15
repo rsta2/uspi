@@ -85,6 +85,8 @@ PACKED TSetupData;
 #define DESCRIPTOR_STRING		3
 #define DESCRIPTOR_INTERFACE		4
 #define DESCRIPTOR_ENDPOINT		5
+#define DESCRIPTOR_CS_INTERFACE	36
+#define DESCRIPTOR_CS_ENDPOINT	37
 
 #define DESCRIPTOR_INDEX_DEFAULT	0
 
@@ -150,6 +152,31 @@ typedef struct
 }
 PACKED TUSBEndpointDescriptor;
 
+// Audio class Endpoint Descriptor
+typedef struct
+{
+	unsigned char	bLength;
+	unsigned char	bDescriptorType;
+	unsigned char	bEndpointAddress;
+	unsigned char	bmAttributes;
+	unsigned short	wMaxPacketSize;
+	unsigned char	bInterval;
+	unsigned char	bRefresh;
+	unsigned char	bSynchAddress;
+}
+PACKED TUSBAudioEndpointDescriptor;
+
+// MIDI-streaming class-specific Endpoint Descriptor
+typedef struct
+{
+	unsigned char	bLength;
+	unsigned char	bDescriptorType;
+	unsigned char	bDescriptorSubType;
+	unsigned char	bNumEmbMIDIJack;
+	unsigned char	bAssocJackIDs[];
+}
+PACKED TUSBMIDIStreamingEndpointDescriptor;
+
 // Descriptor union
 typedef union
 {
@@ -160,9 +187,11 @@ typedef union
 	}
 	Header;
 
-	TUSBConfigurationDescriptor	Configuration;
-	TUSBInterfaceDescriptor		Interface;
-	TUSBEndpointDescriptor		Endpoint;
+	TUSBConfigurationDescriptor			Configuration;
+	TUSBInterfaceDescriptor				Interface;
+	TUSBEndpointDescriptor				Endpoint;
+	TUSBAudioEndpointDescriptor			AudioEndpoint;
+	TUSBMIDIStreamingEndpointDescriptor	MIDIStreamingEndpoint;
 }
 PACKED TUSBDescriptor;
 
