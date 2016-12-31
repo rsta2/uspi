@@ -188,6 +188,7 @@ void USPiMIDIRegisterPacketHandler (TUSPiMIDIPacketHandler *pPacketHandler);
 #define STORAGE_CLASS	3
 #define ETHERNET_CLASS	4
 #define GAMEPAD_CLASS	5
+#define MIDI_CLASS	6
 
 typedef struct TUSPiDeviceInformation
 {

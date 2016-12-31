@@ -26,7 +26,7 @@ Directories
 Interface
 ---------
 
-The USPi library provides functions to be used by the bare metal environment to access USB devices. There are seven groups of functions which are declared in *include/uspi.h*:
+The USPi library provides functions to be used by the bare metal environment to access USB devices. There are eight groups of functions which are declared in *include/uspi.h*:
 
 * USPi initialization
 * Keyboard
@@ -34,6 +34,7 @@ The USPi library provides functions to be used by the bare metal environment to 
 * GamePad/Joystick
 * USB Mass storage device
 * Ethernet controller
+* MIDI (input only)
 * USB device information
 
 The bare metal environment has to provide some functions to the USPi library which are declared in *include/uspios.h*. There are the six groups of functions:

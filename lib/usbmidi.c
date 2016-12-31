@@ -206,9 +206,12 @@ void USBMIDIDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pCon
 			// generate as padding in spite of their status as reserved.
 			if (pPacket[0] != 0)
 			{
-				unsigned nCable = pPacket[0] >> 4;
-				unsigned nLength = cin_to_length[pPacket[0] & 0xf];
-				pThis->m_pPacketHandler(nCable, nLength, &pPacket[1]);
+				if (pThis->m_pPacketHandler != 0)
+				{
+					unsigned nCable = pPacket[0] >> 4;
+					unsigned nLength = cin_to_length[pPacket[0] & 0xf];
+					pThis->m_pPacketHandler(nCable, nLength, &pPacket[1]);
+				}
 			}
 		}
 	}

@@ -324,6 +324,13 @@ int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDevic
 		}
 		break;
 
+	case MIDI_CLASS:
+		if (nDeviceIndex == 0)
+		{
+			pUSBDevice = (TUSBDevice *) s_pLibrary->pMIDI1;
+		}
+		break;
+
 	default:
 		break;
 	}
