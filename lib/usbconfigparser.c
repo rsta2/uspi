@@ -55,6 +55,7 @@ void USBConfigurationParser (TUSBConfigurationParser *pThis, const void *pBuffer
 
 	const TUSBDescriptor *pCurrentPosition = pThis->m_pBuffer;
 	u8 ucLastDescType = 0;
+	boolean bInAudioInterface = FALSE;
 	while (SKIP_BYTES (pCurrentPosition, 2) < pThis->m_pEndPosition)
 	{
 		u8 ucDescLen  = pCurrentPosition->Header.bLength;
@@ -86,6 +87,7 @@ void USBConfigurationParser (TUSBConfigurationParser *pThis, const void *pBuffer
 				return;
 			}
 			ucExpectedLen = sizeof (TUSBInterfaceDescriptor);
+			bInAudioInterface = pCurrentPosition->Interface.bInterfaceClass == 0x01; // Audio class
 			break;
 
 		case DESCRIPTOR_ENDPOINT:
@@ -95,7 +97,7 @@ void USBConfigurationParser (TUSBConfigurationParser *pThis, const void *pBuffer
 				pThis->m_pErrorPosition = pCurrentPosition;
 				return;
 			}
-			ucExpectedLen = sizeof (TUSBEndpointDescriptor);
+			ucExpectedLen = bInAudioInterface ? sizeof (TUSBAudioEndpointDescriptor) : sizeof (TUSBEndpointDescriptor);
 			break;
 
 		default:

@@ -13,3 +13,4 @@ Spanish keymap (taken from Circle)
 
 Joshua Otto
 Providing support for framebuffers where pitch != width * bytes per pixel
+USB MIDI device class support

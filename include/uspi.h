@@ -169,6 +169,17 @@ typedef void TGamePadStatusHandler (unsigned nDeviceIndex, const USPiGamePadStat
 void USPiGamePadRegisterStatusHandler (TGamePadStatusHandler *pStatusHandler);
 
 //
+// MIDI device
+//
+
+// returns != 0 if a MIDI device is available
+int USPiMIDIAvailable (void);
+
+// The packet handler is called once for each MIDI event packet received from the device.
+typedef void TUSPiMIDIPacketHandler (unsigned nCable, unsigned nLength, u8 *pPacket);
+void USPiMIDIRegisterPacketHandler (TUSPiMIDIPacketHandler *pPacketHandler);
+
+//
 // USB device information
 //
 
@@ -177,6 +188,7 @@ void USPiGamePadRegisterStatusHandler (TGamePadStatusHandler *pStatusHandler);
 #define STORAGE_CLASS	3
 #define ETHERNET_CLASS	4
 #define GAMEPAD_CLASS	5
+#define MIDI_CLASS	6
 
 typedef struct TUSPiDeviceInformation
 {

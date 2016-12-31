@@ -55,6 +55,8 @@ int USPiInitialize (void)
 
 	s_pLibrary->pUMouse1 = (TUSBMouseDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "umouse1", FALSE);
 
+	s_pLibrary->pMIDI1 = (TUSBMIDIDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "umidi1", FALSE);
+
 	for (unsigned i = 0; i < MAX_DEVICES; i++)
 	{
 		TString DeviceName;
@@ -266,6 +268,19 @@ const USPiGamePadState *USPiGamePadGetStatus (unsigned nDeviceIndex)
 	return &s_pLibrary->pUPAD[nDeviceIndex]->m_State;
 }
 
+int USPiMIDIAvailable (void)
+{
+	assert (s_pLibrary != 0);
+	return s_pLibrary->pMIDI1 != 0;
+}
+
+void USPiMIDIRegisterPacketHandler (TUSPiMIDIPacketHandler *pPacketHandler)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pMIDI1 != 0);
+	USBMIDIDeviceRegisterPacketHandler (s_pLibrary->pMIDI1, pPacketHandler);
+}
+
 int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDeviceInformation *pInfo)
 {
 	assert (s_pLibrary != 0);
@@ -306,6 +321,13 @@ int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDevic
 		if (nDeviceIndex < MAX_DEVICES)
 		{
 			pUSBDevice = (TUSBDevice *) s_pLibrary->pUPAD[nDeviceIndex];
+		}
+		break;
+
+	case MIDI_CLASS:
+		if (nDeviceIndex == 0)
+		{
+			pUSBDevice = (TUSBDevice *) s_pLibrary->pMIDI1;
 		}
 		break;
 

@@ -43,7 +43,7 @@ void USBEndpoint2 (TUSBEndpoint *pThis, TUSBDevice *pDevice, const TUSBEndpointD
 	assert (pThis->m_pDevice != 0);
 
 	assert (pDesc != 0);
-	assert (pDesc->bLength == sizeof *pDesc);
+	assert (pDesc->bLength == sizeof *pDesc || pDesc->bLength == sizeof (TUSBAudioEndpointDescriptor));
 	assert (pDesc->bDescriptorType == DESCRIPTOR_ENDPOINT);
 
 	switch (pDesc->bmAttributes & 0x03)
