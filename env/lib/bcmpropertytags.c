@@ -2,7 +2,7 @@
 // bcmpropertytags.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2017  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ boolean BcmPropertyTagsGetTag (TBcmPropertyTags *pThis, u32 nTagId,
 	DataSyncBarrier ();
 #endif
 
-	u32 nBufferAddress = GPU_MEM_BASE + (u32) pBuffer;
+	u32 nBufferAddress = BUS_ADDRESS ((u32) pBuffer);
 	if (BcmMailBoxWriteRead (&pThis->m_MailBox, nBufferAddress) != nBufferAddress)
 	{
 		return FALSE;

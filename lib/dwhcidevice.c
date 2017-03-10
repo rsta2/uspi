@@ -7,7 +7,7 @@
 //	no dynamic attachments
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2017  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -857,7 +857,7 @@ void DWHCIDeviceStartChannel (TDWHCIDevice *pThis, TDWHCITransferStageData *pSta
 	// set DMA address
 	TDWHCIRegister DMAAddress;
 	DWHCIRegister2 (&DMAAddress, DWHCI_HOST_CHAN_DMA_ADDR (nChannel),
-			DWHCITransferStageDataGetDMAAddress (pStageData) + GPU_MEM_BASE);
+			BUS_ADDRESS (DWHCITransferStageDataGetDMAAddress (pStageData)));
 	DWHCIRegisterWrite (&DMAAddress);
 
 	uspi_CleanAndInvalidateDataCacheRange (DWHCITransferStageDataGetDMAAddress (pStageData),
