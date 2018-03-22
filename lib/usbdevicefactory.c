@@ -2,7 +2,7 @@
 // usbdevicefactory.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include <uspi/usbgamepad.h>
 #include <uspi/usbmidi.h>
 #include <uspi/smsc951x.h>
+#include <uspi/lan7800.h>
 
 TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName);
 
@@ -89,6 +90,13 @@ TUSBDevice *GetDevice (TUSBDevice *pParent, TString *pName)
 		TSMSC951xDevice *pDevice = (TSMSC951xDevice *) malloc (sizeof (TSMSC951xDevice));
 		assert (pDevice != 0);
 		SMSC951xDevice (pDevice, pParent);
+		pResult = (TUSBDevice *) pDevice;
+	}
+	else if (StringCompare (pName, "ven424-7800") == 0)
+	{
+		TLAN7800Device *pDevice = (TLAN7800Device *) malloc (sizeof (TLAN7800Device));
+		assert (pDevice != 0);
+		LAN7800Device (pDevice, pParent);
 		pResult = (TUSBDevice *) pDevice;
 	}
     else if (StringCompare (pName, "int3-0-0") == 0)

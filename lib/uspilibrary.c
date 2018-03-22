@@ -2,7 +2,7 @@
 // uspilibrary.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ int USPiInitialize (void)
 	DeviceNameService (&s_pLibrary->NameService);
 	DWHCIDevice (&s_pLibrary->DWHCI);
 	s_pLibrary->pEth0 = 0;
+	s_pLibrary->pEth10 = 0;
 
 	if (!DWHCIDeviceInitialize (&s_pLibrary->DWHCI))
 	{
@@ -70,6 +71,8 @@ int USPiInitialize (void)
 	}
 
 	s_pLibrary->pEth0 = (TSMSC951xDevice *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "eth0", FALSE);
+
+	s_pLibrary->pEth10 = (TLAN7800Device *) DeviceNameServiceGetDevice (DeviceNameServiceGet (), "eth10", FALSE);
 
 	for (unsigned i = 0; i < MAX_DEVICES; i++)
 	{
@@ -196,14 +199,23 @@ unsigned USPiMassStorageDeviceGetCapacity (unsigned nDeviceIndex)
 int USPiEthernetAvailable (void)
 {
 	assert (s_pLibrary != 0);
-	return s_pLibrary->pEth0 != 0;
+	return s_pLibrary->pEth0 != 0 || s_pLibrary->pEth10 != 0;
 }
 
 void USPiGetMACAddress (unsigned char Buffer[6])
 {
 	assert (s_pLibrary != 0);
-	assert (s_pLibrary->pEth0 != 0);
-	TMACAddress *pMACAddress = SMSC951xDeviceGetMACAddress (s_pLibrary->pEth0);
+
+	TMACAddress *pMACAddress;
+	if (s_pLibrary->pEth10 != 0)
+	{
+		pMACAddress = LAN7800DeviceGetMACAddress (s_pLibrary->pEth10);
+	}
+	else
+	{
+		assert (s_pLibrary->pEth0 != 0);
+		pMACAddress = SMSC951xDeviceGetMACAddress (s_pLibrary->pEth0);
+	}
 
 	assert (Buffer != 0);
 	MACAddressCopyTo (pMACAddress, Buffer);
@@ -212,6 +224,12 @@ void USPiGetMACAddress (unsigned char Buffer[6])
 int USPiSendFrame (const void *pBuffer, unsigned nLength)
 {
 	assert (s_pLibrary != 0);
+
+	if (s_pLibrary->pEth10 != 0)
+	{
+		return LAN7800DeviceSendFrame (s_pLibrary->pEth10, pBuffer, nLength) ? 1 : 0;
+	}
+
 	assert (s_pLibrary->pEth0 != 0);
 	return SMSC951xDeviceSendFrame (s_pLibrary->pEth0, pBuffer, nLength) ? 1 : 0;
 }
@@ -219,6 +237,12 @@ int USPiSendFrame (const void *pBuffer, unsigned nLength)
 int USPiReceiveFrame (void *pBuffer, unsigned *pResultLength)
 {
 	assert (s_pLibrary != 0);
+
+	if (s_pLibrary->pEth10 != 0)
+	{
+		return LAN7800DeviceReceiveFrame (s_pLibrary->pEth10, pBuffer, pResultLength) ? 1 : 0;
+	}
+
 	assert (s_pLibrary->pEth0 != 0);
 	return SMSC951xDeviceReceiveFrame (s_pLibrary->pEth0, pBuffer, pResultLength) ? 1 : 0;
 }
@@ -313,7 +337,14 @@ int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDevic
 	case ETHERNET_CLASS:
 		if (nDeviceIndex == 0)
 		{
-			pUSBDevice = (TUSBDevice *) s_pLibrary->pEth0;
+			if (s_pLibrary->pEth10 != 0)
+			{
+				pUSBDevice = (TUSBDevice *) s_pLibrary->pEth10;
+			}
+			else
+			{
+				pUSBDevice = (TUSBDevice *) s_pLibrary->pEth0;
+			}
 		}
 		break;
 
