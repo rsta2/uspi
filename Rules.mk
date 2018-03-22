@@ -2,7 +2,7 @@
 # Rules.mk
 #
 # USPi - An USB driver for Raspberry Pi written in C
-# Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
+# Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ endif
 -include $(USPIHOME)/Config.mk
 
 RASPPI	?= 1
-PREFIX	?= arm-linux-gnueabihf-
+PREFIX	?= arm-none-eabi-
 
 CC	= $(PREFIX)gcc
 AS	= $(CC)
@@ -40,7 +40,7 @@ else
 ARCH	?= -march=armv8-a -mtune=cortex-a53 -mfloat-abi=hard
 endif
 
-OPTIMIZE ?= -O
+OPTIMIZE ?= -O2
 
 AFLAGS	+= $(ARCH) -DRASPPI=$(RASPPI)
 CFLAGS	+= $(ARCH) -Wall -Wno-psabi -fsigned-char -fno-builtin -nostdinc -nostdlib \
