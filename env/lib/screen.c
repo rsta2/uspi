@@ -3,7 +3,7 @@
 //
 // USPi - An USB driver for Raspberry Pi written in C
 // Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
-// 
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
@@ -82,7 +82,7 @@ void ScreenDevice (TScreenDevice *pThis, unsigned nWidth, unsigned nHeight)
 void _ScreenDevice (TScreenDevice *pThis)
 {
 	pThis->m_pBuffer = 0;
-	
+
 	_BcmFrameBuffer (pThis->m_pFrameBuffer);
 	free (pThis->m_pFrameBuffer);
 	pThis->m_pFrameBuffer = 0;
@@ -145,7 +145,7 @@ unsigned ScreenDeviceGetHeight (TScreenDevice *pThis)
 int ScreenDeviceWrite (TScreenDevice *pThis, const void *pBuffer, unsigned nCount)
 {
 	ScreenDeviceInvertCursor (pThis);
-	
+
 	const char *pChar = (const char *) pBuffer;
 	int nResult = 0;
 
@@ -157,7 +157,7 @@ int ScreenDeviceWrite (TScreenDevice *pThis, const void *pBuffer, unsigned nCoun
 	}
 
 	ScreenDeviceInvertCursor (pThis);
-	
+
 	DataMemBarrier ();
 
 	return nResult;
@@ -179,7 +179,7 @@ TScreenColor ScreenDeviceGetPixel (TScreenDevice *pThis, unsigned nPosX, unsigne
 	{
 		return pThis->m_pBuffer[pThis->m_nPitch * nPosY + nPosX];
 	}
-	
+
 	return BLACK_COLOR;
 }
 
@@ -347,7 +347,7 @@ void ScreenDeviceWrite2 (TScreenDevice *pThis, char chChar)
 			}
 			pThis->m_nState = ScreenStateStart;
 			break;
-			
+
 		case 'm':
 			ScreenDeviceSetStandoutMode (pThis, pThis->m_nParam1);
 			pThis->m_nState = ScreenStateStart;
@@ -468,17 +468,13 @@ void ScreenDeviceCarriageReturn (TScreenDevice *pThis)
 void ScreenDeviceClearDisplayEnd (TScreenDevice *pThis)
 {
 	ScreenDeviceClearLineEnd (pThis);
-	
+
 	unsigned nPosY = pThis->m_nCursorY + CharGeneratorGetCharHeight (&pThis->m_CharGen);
 	unsigned nOffset = nPosY * pThis->m_nPitch;
-	
+
 	TScreenColor *pBuffer = pThis->m_pBuffer + nOffset;
 	unsigned nSize = pThis->m_nSize / sizeof (TScreenColor) - nOffset;
-	
-	while (nSize--)
-	{
-		*pBuffer++ = BLACK_COLOR;
-	}
+	memset(pBuffer, BLACK_COLOR, nSize);
 }
 
 void ScreenDeviceClearLineEnd (TScreenDevice *pThis)
@@ -563,7 +559,7 @@ void ScreenDeviceDeleteLines (TScreenDevice *pThis, unsigned nCount)	// TODO
 void ScreenDeviceDisplayChar (TScreenDevice *pThis, char chChar)
 {
 	// TODO: Insert mode
-	
+
 	if (' ' <= (unsigned char) chChar)
 	{
 		ScreenDeviceDisplayChar2 (pThis, chChar, pThis->m_nCursorX, pThis->m_nCursorY, pThis->m_Color);
@@ -630,7 +626,7 @@ void ScreenDeviceSetStandoutMode (TScreenDevice *pThis, unsigned nMode)
 	case 27:
 		pThis->m_Color = NORMAL_COLOR;
 		break;
-		
+
 	case 1:
 		pThis->m_Color = HIGH_COLOR;
 		break;
@@ -648,7 +644,7 @@ void ScreenDeviceSetStandoutMode (TScreenDevice *pThis, unsigned nMode)
 void ScreenDeviceTabulator (TScreenDevice *pThis)
 {
 	unsigned nTabWidth = CharGeneratorGetCharWidth (&pThis->m_CharGen) * 8;
-	
+
 	pThis->m_nCursorX = ((pThis->m_nCursorX + nTabWidth) / nTabWidth) * nTabWidth;
 	if (pThis->m_nCursorX >= pThis->m_nWidth)
 	{
@@ -672,10 +668,7 @@ void ScreenDeviceScroll (TScreenDevice *pThis)
 	pTo += nSize / sizeof (u32);
 
 	nSize = pThis->m_nPitch * nLines * sizeof (TScreenColor) / sizeof (u32);
-	while (nSize--)
-	{
-		*pTo++ = BLACK_COLOR;
-	}
+	memset(pTo, BLACK_COLOR, nSize);
 }
 
 void ScreenDeviceDisplayChar2 (TScreenDevice *pThis, char chChar, unsigned nPosX, unsigned nPosY, TScreenColor Color)
@@ -707,7 +700,7 @@ void ScreenDeviceInvertCursor (TScreenDevice *pThis)
 	{
 		return;
 	}
-	
+
 	for (unsigned y = CharGeneratorGetUnderline (&pThis->m_CharGen); y < CharGeneratorGetCharHeight (&pThis->m_CharGen); y++)
 	{
 		for (unsigned x = 0; x < CharGeneratorGetCharWidth (&pThis->m_CharGen); x++)
