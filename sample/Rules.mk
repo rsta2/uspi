@@ -7,7 +7,7 @@
 #
 # USPi - An USB driver for Raspberry Pi written in C
 # Copyright (C) 2014  R. Stange <rsta2@o2online.de>
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -29,7 +29,7 @@ endif
 CFLAGS	+= -I $(USPIHOME)/env/include
 
 kernel.img: $(OBJS) $(LIBS)
-	$(LD) -o kernel.elf -Map kernel.map -T $(USPIHOME)/env/uspienv.ld $(USPIHOME)/env/lib/startup.o $(OBJS) $(LIBS)
+	$(LD) -o kernel.elf $(LDFLAGS) $(OBJS) $(LIBS)
 	$(PREFIX)objdump -D kernel.elf > kernel.lst
 	$(PREFIX)objcopy kernel.elf -O binary kernel.img
 	wc -c kernel.img
