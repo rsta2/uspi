@@ -2,7 +2,7 @@
 // screen.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -474,11 +474,15 @@ void ScreenDeviceClearDisplayEnd (TScreenDevice *pThis)
 	
 	TScreenColor *pBuffer = pThis->m_pBuffer + nOffset;
 	unsigned nSize = pThis->m_nSize / sizeof (TScreenColor) - nOffset;
-	
+
+#if BLACK_COLOR == 0
+	memset (pBuffer, 0, nSize * sizeof (TScreenColor));
+#else
 	while (nSize--)
 	{
 		*pBuffer++ = BLACK_COLOR;
 	}
+#endif
 }
 
 void ScreenDeviceClearLineEnd (TScreenDevice *pThis)
@@ -672,10 +676,14 @@ void ScreenDeviceScroll (TScreenDevice *pThis)
 	pTo += nSize / sizeof (u32);
 
 	nSize = pThis->m_nPitch * nLines * sizeof (TScreenColor) / sizeof (u32);
+#if BLACK_COLOR == 0
+	memset (pTo, 0, nSize * sizeof (u32));
+#else
 	while (nSize--)
 	{
 		*pTo++ = BLACK_COLOR;
 	}
+#endif
 }
 
 void ScreenDeviceDisplayChar2 (TScreenDevice *pThis, char chChar, unsigned nPosX, unsigned nPosY, TScreenColor Color)

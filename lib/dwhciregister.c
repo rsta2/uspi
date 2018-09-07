@@ -2,7 +2,7 @@
 // dwhciregister.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ void _DWHCIRegister (TDWHCIRegister *pThis)
 u32 DWHCIRegisterRead (TDWHCIRegister *pThis)
 {
 	assert (pThis != 0);
-	pThis->m_nBuffer = *(u32 *) pThis->m_nAddress;
+	pThis->m_nBuffer = *(volatile u32 *) pThis->m_nAddress;
 	pThis->m_bValid = TRUE;
 	
 	return pThis->m_nBuffer;
@@ -55,7 +55,7 @@ void DWHCIRegisterWrite (TDWHCIRegister *pThis)
 {
 	assert (pThis != 0);
 	assert (pThis->m_bValid);
-	*(u32 *) pThis->m_nAddress = pThis->m_nBuffer;
+	*(volatile u32 *) pThis->m_nAddress = pThis->m_nBuffer;
 }
 
 u32 DWHCIRegisterGet (TDWHCIRegister *pThis)

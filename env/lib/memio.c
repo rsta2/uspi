@@ -2,7 +2,7 @@
 // memio.cpp
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -21,10 +21,10 @@
 
 u32 read32 (u32 nAddress)
 {
-	return *(u32 *) nAddress;
+	return *(volatile u32 *) nAddress;
 }
 
 void write32 (u32 nAddress, u32 nValue)
 {
-	*(u32 *) nAddress = nValue;
+	*(volatile u32 *) nAddress = nValue;
 }
