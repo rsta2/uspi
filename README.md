@@ -1,6 +1,8 @@
 USPi
 ====
 
+> Raspberry Pi is a trademark of the Raspberry Pi Foundation.
+
 > If you read this file in an editor you should switch line wrapping on.
 
 Overview
@@ -84,3 +86,20 @@ The sample programs in the *sample/* subdirectory and all required libraries can
 `./makeall`
 
 The ready build *kernel.img* image file is in the same directory where its source code is. Copy it on a SD(HC) card along with the firmware files *bootcode.bin*, *fixup.dat* and *start.elf* which can be get [here](https://github.com/raspberrypi/firmware/tree/master/boot). Put the SD(HC) card into your Raspberry Pi and start it.
+
+AArch64
+-------
+
+The USPi library can be built so that it can be used in an AArch64 (64-bit) environment. You have to define the following in the file *Rules.mk* or *Config.mk* before build to do this:
+
+	AARCH64 = 1
+
+The AArch64 support does not come with an environment library. Therefore it can be used only together with your own provided OS environment. The sample programs in the *sample/* subdirectory cannot be built out-of-the-box.
+
+To build the USPi library do the following:
+
+	cd lib
+	make clean
+	make
+
+You should add `-DAARCH64=1` to the compiler options in your OS environment when using the USPi library in AArch64 mode there.

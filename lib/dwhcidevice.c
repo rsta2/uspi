@@ -7,7 +7,7 @@
 //	no dynamic attachments
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2017  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -80,7 +80,7 @@ void DWHCIDeviceStartTransaction (TDWHCIDevice *pThis, TDWHCITransferStageData *
 void DWHCIDeviceStartChannel (TDWHCIDevice *pThis, TDWHCITransferStageData *pStageData);
 void DWHCIDeviceChannelInterruptHandler (TDWHCIDevice *pThis, unsigned nChannel);
 void DWHCIDeviceInterruptHandler (void *pParam);
-void DWHCIDeviceTimerHandler (unsigned hTimer, void *pParam, void *pContext);
+void DWHCIDeviceTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
 unsigned DWHCIDeviceAllocateChannel (TDWHCIDevice *pThis);
 void DWHCIDeviceFreeChannel (TDWHCIDevice *pThis, unsigned nChannel);
 boolean DWHCIDeviceWaitForBit (TDWHCIDevice *pThis, TDWHCIRegister *pRegister, u32 nMask,boolean bWaitUntilSet, unsigned nMsTimeout);
@@ -1233,7 +1233,7 @@ void DWHCIDeviceInterruptHandler (void *pParam)
 	_DWHCIRegister (&IntStatus);
 }
 
-void DWHCIDeviceTimerHandler (unsigned hTimer, void *pParam, void *pContext)
+void DWHCIDeviceTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext)
 {
 	TDWHCIDevice *pThis = (TDWHCIDevice *) pContext;
 	assert (pThis != 0);

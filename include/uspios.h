@@ -4,7 +4,7 @@
 // External functions used by the USPi library
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -61,7 +61,13 @@ void free (void *pBlock);
 void MsDelay (unsigned nMilliSeconds);	
 void usDelay (unsigned nMicroSeconds);
 
-typedef void TKernelTimerHandler (unsigned hTimer, void *pParam, void *pContext);
+#ifndef AARCH64
+	typedef unsigned TKernelTimerHandle;
+#else
+	typedef unsigned long TKernelTimerHandle;
+#endif
+
+typedef void TKernelTimerHandler (TKernelTimerHandle hTimer, void *pParam, void *pContext);
 
 // returns the timer handle (hTimer)
 unsigned StartKernelTimer (unsigned	        nHzDelay,	// in HZ units (see "system configuration" above)

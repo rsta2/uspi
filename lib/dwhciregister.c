@@ -21,14 +21,14 @@
 #include <uspios.h>
 #include <uspi/assert.h>
 
-void DWHCIRegister (TDWHCIRegister *pThis, u32 nAddress)
+void DWHCIRegister (TDWHCIRegister *pThis, uintptr nAddress)
 {
 	assert (pThis != 0);
 	pThis->m_bValid = FALSE;
 	pThis->m_nAddress = nAddress;
 }
 
-void DWHCIRegister2 (TDWHCIRegister *pThis, u32 nAddress, u32 nValue)
+void DWHCIRegister2 (TDWHCIRegister *pThis, uintptr nAddress, u32 nValue)
 {
 	assert (pThis != 0);
 	pThis->m_bValid = TRUE;

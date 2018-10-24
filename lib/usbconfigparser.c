@@ -2,7 +2,7 @@
 // usbconfigparser.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -182,7 +182,7 @@ void USBConfigurationParserError (TUSBConfigurationParser *pThis, const char *pS
 	assert (pSource != 0);
 	LogWrite (pSource, LOG_ERROR,
 		     "Invalid configuration descriptor (offset 0x%X)",
-		     (unsigned) pThis->m_pErrorPosition - (unsigned) pThis->m_pBuffer);
+		     (unsigned) ((uintptr) pThis->m_pErrorPosition - (uintptr) pThis->m_pBuffer));
 #ifndef NDEBUG
 	DebugHexdump (pThis->m_pBuffer, pThis->m_nBufLen, pSource);
 #endif

@@ -2,7 +2,7 @@
 // dwhciregister.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -30,13 +30,13 @@ extern "C" {
 typedef struct TDWHCIRegister
 {
 	boolean	m_bValid;
-	u32	m_nAddress;
+	uintptr	m_nAddress;
 	u32	m_nBuffer;
 }
 TDWHCIRegister;
 
-void DWHCIRegister (TDWHCIRegister *pThis, u32 nAddress);
-void DWHCIRegister2 (TDWHCIRegister *pThis, u32 nAddress, u32 nValue);
+void DWHCIRegister (TDWHCIRegister *pThis, uintptr nAddress);
+void DWHCIRegister2 (TDWHCIRegister *pThis, uintptr nAddress, u32 nValue);
 void _DWHCIRegister (TDWHCIRegister *pThis);
 
 u32 DWHCIRegisterRead (TDWHCIRegister *pThis);

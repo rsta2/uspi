@@ -2,7 +2,7 @@
 // dwhcixferstagedata.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -102,7 +102,7 @@ void DWHCITransferStageData (TDWHCITransferStageData *pThis, unsigned nChannel, 
 	}
 
 	assert (pThis->m_pBufferPointer != 0);
-	assert (((u32) pThis->m_pBufferPointer & 3) == 0);
+	assert (((uintptr) pThis->m_pBufferPointer & 3) == 0);
 
 	if (pThis->m_bSplitTransaction)
 	{
@@ -363,7 +363,7 @@ u32 DWHCITransferStageDataGetDMAAddress (TDWHCITransferStageData *pThis)
 	assert (pThis != 0);
 	assert (pThis->m_pBufferPointer != 0);
 
-	return (u32) pThis->m_pBufferPointer;
+	return (u32) (uintptr) pThis->m_pBufferPointer;
 }
 
 u32 DWHCITransferStageDataGetBytesToTransfer (TDWHCITransferStageData *pThis)

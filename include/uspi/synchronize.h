@@ -2,7 +2,7 @@
 // synchronize.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -33,6 +33,8 @@ extern "C" {
 void uspi_EnterCritical (void);		// disable interrupts (nested calls possible)
 void uspi_LeaveCritical (void);		// enable interrupts (nested calls possible)
 
+#ifndef AARCH64
+
 #if RASPPI == 1
 
 //
@@ -57,7 +59,7 @@ void uspi_CleanAndInvalidateDataCacheRange (u32 nAddress, u32 nLength) MAXOPT;
 #define InstructionSyncBarrier() FlushPrefetchBuffer()
 #define InstructionMemBarrier()	FlushPrefetchBuffer()
 
-#else
+#else	// #if RASPPI == 1
 
 //
 // Cache control
@@ -79,7 +81,22 @@ void uspi_CleanAndInvalidateDataCacheRange (u32 nAddress, u32 nLength) MAXOPT;
 #define InstructionSyncBarrier() __asm volatile ("isb" ::: "memory")
 #define InstructionMemBarrier()	__asm volatile ("isb" ::: "memory")
 
-#endif
+#endif	// #if RASPPI == 1
+
+#else	// #ifdef AARCH64
+
+//
+// Cache control
+//
+void uspi_CleanAndInvalidateDataCacheRange (u64 nAddress, u64 nLength) MAXOPT;
+
+//
+// Barriers
+//
+#define DataSyncBarrier()	__asm volatile ("dsb sy" ::: "memory")
+#define DataMemBarrier() 	__asm volatile ("dmb sy" ::: "memory")
+
+#endif	// #ifdef AARCH64
 
 #define CompilerBarrier()	__asm volatile ("" ::: "memory")
 
