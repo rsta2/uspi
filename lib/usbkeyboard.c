@@ -21,6 +21,7 @@
 #include <uspi/usbhid.h>
 #include <uspi/usbhostcontroller.h>
 #include <uspi/devicenameservice.h>
+#include <uspi/macros.h>
 #include <uspi/assert.h>
 #include <uspios.h>
 
@@ -169,6 +170,19 @@ boolean USBKeyboardDeviceConfigure (TUSBDevice *pUSBDevice)
 				       pThis->m_ucInterfaceNumber, 0, 0) < 0)
 	{
 		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set boot protocol");
+
+		return FALSE;
+	}
+
+	// setting the LED status forces some keyboard adapters to work
+	u8 LEDs[1] ALIGN(4) = {0};	// DMA buffer
+	if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
+				       USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+				       REQUEST_OUT | REQUEST_CLASS | REQUEST_TO_INTERFACE,
+				       SET_REPORT, (REPORT_TYPE_OUTPUT << 8) | 0,
+				       pThis->m_ucInterfaceNumber, LEDs, sizeof LEDs) < 0)
+	{
+		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set LEDs");
 
 		return FALSE;
 	}
