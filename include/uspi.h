@@ -82,16 +82,6 @@ void USPiMouseRegisterStatusHandler (TUSPiMouseStatusHandler *pStatusHandler);
 #define MOUSE_BUTTON2	(1 << 1)
 #define MOUSE_BUTTON3	(1 << 2)
 
-// ucModifiers (bit is set if modifier key is pressed)
-#define LCTRL		(1 << 0)
-#define LSHIFT		(1 << 1)
-#define ALT		(1 << 2)
-#define LWIN		(1 << 3)
-#define RCTRL		(1 << 4)
-#define RSHIFT		(1 << 5)
-#define ALTGR		(1 << 6)
-#define RWIN		(1 << 7)
-
 //
 // Mass storage device
 //
