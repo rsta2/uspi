@@ -20,7 +20,7 @@
 #ifndef _uspi_smsc951x_h
 #define _uspi_smsc951x_h
 
-#include <uspi/usbdevice.h>
+#include <uspi/usbfunction.h>
 #include <uspi/usbendpoint.h>
 #include <uspi/usbrequest.h>
 #include <uspi/macaddress.h>
@@ -30,7 +30,7 @@
 
 typedef struct TSMSC951xDevice
 {
-	TUSBDevice m_USBDevice;
+	TUSBFunction m_USBFunction;
 
 	TUSBEndpoint *m_pEndpointBulkIn;
 	TUSBEndpoint *m_pEndpointBulkOut;
@@ -41,10 +41,10 @@ typedef struct TSMSC951xDevice
 }
 TSMSC951xDevice;
 
-void SMSC951xDevice (TSMSC951xDevice *pThis, TUSBDevice *pDevice);
+void SMSC951xDevice (TSMSC951xDevice *pThis, TUSBFunction *pFunction);
 void _SMSC951xDevice (TSMSC951xDevice *pThis);
 
-boolean SMSC951xDeviceConfigure (TUSBDevice *pUSBDevice);
+boolean SMSC951xDeviceConfigure (TUSBFunction *pUSBFunction);
 
 TMACAddress *SMSC951xDeviceGetMACAddress (TSMSC951xDevice *pThis);
 

@@ -9,7 +9,7 @@
 // See the file lib/README for details!
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -131,12 +131,12 @@ void SMSC951xDeviceDumpReg (TSMSC951xDevice *pThis, const char *pName, u32 nInde
 void SMSC951xDeviceDumpRegs (TSMSC951xDevice *pThis);
 #endif
 
-void SMSC951xDevice (TSMSC951xDevice *pThis, TUSBDevice *pDevice)
+void SMSC951xDevice (TSMSC951xDevice *pThis, TUSBFunction *pDevice)
 {
 	assert (pThis != 0);
 
-	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
-	pThis->m_USBDevice.Configure = SMSC951xDeviceConfigure;
+	USBFunctionCopy (&pThis->m_USBFunction, pDevice);
+	pThis->m_USBFunction.Configure = SMSC951xDeviceConfigure;
 
 	pThis->m_pEndpointBulkIn = 0;
 	pThis->m_pEndpointBulkOut = 0;
@@ -170,12 +170,12 @@ void _SMSC951xDevice (TSMSC951xDevice *pThis)
 		pThis->m_pEndpointBulkIn = 0;
 	}
 	
-	_USBDevice (&pThis->m_USBDevice);
+	_USBFunction (&pThis->m_USBFunction);
 }
 
-boolean SMSC951xDeviceConfigure (TUSBDevice *pUSBDevice)
+boolean SMSC951xDeviceConfigure (TUSBFunction *pUSBFunction)
 {
-	TSMSC951xDevice *pThis = (TSMSC951xDevice *) pUSBDevice;
+	TSMSC951xDevice *pThis = (TSMSC951xDevice *) pUSBFunction;
 	assert (pThis != 0);
 
 	u8 MACAddress[MAC_ADDRESS_SIZE];
@@ -194,26 +194,9 @@ boolean SMSC951xDeviceConfigure (TUSBDevice *pUSBDevice)
 	MACAddressFormat (&pThis->m_MACAddress, &MACString);
 	LogWrite (FromSMSC951x, LOG_DEBUG, "MAC address is %s", StringGet (&MACString));
 
-	const TUSBConfigurationDescriptor *pConfigDesc =
-		(TUSBConfigurationDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_CONFIGURATION);
-	if (   pConfigDesc == 0
-	    || pConfigDesc->bNumInterfaces != 1)
+	if (USBFunctionGetNumEndpoints (&pThis->m_USBFunction) != 3)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromSMSC951x);
-
-		_String (&MACString);
-
-		return FALSE;
-	}
-
-	const TUSBInterfaceDescriptor *pInterfaceDesc =
-		(TUSBInterfaceDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_INTERFACE);
-	if (   pInterfaceDesc == 0
-	    || pInterfaceDesc->bInterfaceNumber	 != 0x00
-	    || pInterfaceDesc->bAlternateSetting != 0x00
-	    || pInterfaceDesc->bNumEndpoints	 != 3)
-	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromSMSC951x);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromSMSC951x);
 
 		_String (&MACString);
 
@@ -221,7 +204,7 @@ boolean SMSC951xDeviceConfigure (TUSBDevice *pUSBDevice)
 	}
 
 	const TUSBEndpointDescriptor *pEndpointDesc;
-	while ((pEndpointDesc = (TUSBEndpointDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_ENDPOINT)) != 0)
+	while ((pEndpointDesc = (TUSBEndpointDescriptor *) USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_ENDPOINT)) != 0)
 	{
 		if ((pEndpointDesc->bmAttributes & 0x3F) == 0x02)		// Bulk
 		{
@@ -229,7 +212,7 @@ boolean SMSC951xDeviceConfigure (TUSBDevice *pUSBDevice)
 			{
 				if (pThis->m_pEndpointBulkIn != 0)
 				{
-					USBDeviceConfigurationError (&pThis->m_USBDevice, FromSMSC951x);
+					USBFunctionConfigurationError (&pThis->m_USBFunction, FromSMSC951x);
 
 					_String (&MACString);
 
@@ -238,13 +221,13 @@ boolean SMSC951xDeviceConfigure (TUSBDevice *pUSBDevice)
 
 				pThis->m_pEndpointBulkIn = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
 				assert (pThis->m_pEndpointBulkIn);
-				USBEndpoint2 (pThis->m_pEndpointBulkIn, &pThis->m_USBDevice, pEndpointDesc);
+				USBEndpoint2 (pThis->m_pEndpointBulkIn, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
 			}
 			else							// Output
 			{
 				if (pThis->m_pEndpointBulkOut != 0)
 				{
-					USBDeviceConfigurationError (&pThis->m_USBDevice, FromSMSC951x);
+					USBFunctionConfigurationError (&pThis->m_USBFunction, FromSMSC951x);
 
 					_String (&MACString);
 
@@ -253,7 +236,7 @@ boolean SMSC951xDeviceConfigure (TUSBDevice *pUSBDevice)
 
 				pThis->m_pEndpointBulkOut = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
 				assert (pThis->m_pEndpointBulkOut);
-				USBEndpoint2 (pThis->m_pEndpointBulkOut, &pThis->m_USBDevice, pEndpointDesc);
+				USBEndpoint2 (pThis->m_pEndpointBulkOut, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
 			}
 		}
 	}
@@ -261,16 +244,16 @@ boolean SMSC951xDeviceConfigure (TUSBDevice *pUSBDevice)
 	if (   pThis->m_pEndpointBulkIn  == 0
 	    || pThis->m_pEndpointBulkOut == 0)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromSMSC951x);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromSMSC951x);
 
 		_String (&MACString);
 
 		return FALSE;
 	}
 
-	if (!USBDeviceConfigure (&pThis->m_USBDevice))
+	if (!USBFunctionConfigure (&pThis->m_USBFunction))
 	{
-		LogWrite (FromSMSC951x, LOG_ERROR, "Cannot set configuration");
+		LogWrite (FromSMSC951x, LOG_ERROR, "Cannot set interface");
 
 		_String (&MACString);
 
@@ -348,7 +331,7 @@ boolean SMSC951xDeviceSendFrame (TSMSC951xDevice *pThis, const void *pBuffer, un
 	*(u32 *) &pThis->m_pTxBuffer[4] = nLength;
 	
 	assert (pThis->m_pEndpointBulkOut != 0);
-	return DWHCIDeviceTransfer (USBDeviceGetHost (&pThis->m_USBDevice), pThis->m_pEndpointBulkOut, pThis->m_pTxBuffer, nLength+8) >= 0;
+	return DWHCIDeviceTransfer (USBFunctionGetHost (&pThis->m_USBFunction), pThis->m_pEndpointBulkOut, pThis->m_pTxBuffer, nLength+8) >= 0;
 }
 
 boolean SMSC951xDeviceReceiveFrame (TSMSC951xDevice *pThis, void *pBuffer, unsigned *pResultLength)
@@ -360,7 +343,7 @@ boolean SMSC951xDeviceReceiveFrame (TSMSC951xDevice *pThis, void *pBuffer, unsig
 	TUSBRequest URB;
 	USBRequest (&URB, pThis->m_pEndpointBulkIn, pBuffer, FRAME_BUFFER_SIZE, 0);
 
-	if (!DWHCIDeviceSubmitBlockingRequest (USBDeviceGetHost (&pThis->m_USBDevice), &URB))
+	if (!DWHCIDeviceSubmitBlockingRequest (USBFunctionGetHost (&pThis->m_USBFunction), &URB))
 	{
 		_USBRequest (&URB);
 
@@ -412,8 +395,8 @@ boolean SMSC951xDeviceWriteReg (TSMSC951xDevice *pThis, u32 nIndex, u32 nValue)
 {
 	assert (pThis != 0);
 
-	return DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-					  USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+	return DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+					  USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
 					  REQUEST_OUT | REQUEST_VENDOR, WRITE_REGISTER,
 					  0, nIndex, &nValue, sizeof nValue) >= 0;
 }
@@ -422,8 +405,8 @@ boolean SMSC951xDeviceReadReg (TSMSC951xDevice *pThis, u32 nIndex, u32 *pValue)
 {
 	assert (pThis != 0);
 
-	return DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-					  USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+	return DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+					  USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
 					  REQUEST_IN | REQUEST_VENDOR, READ_REGISTER,
 					  0, nIndex, pValue, sizeof *pValue) == (int) sizeof *pValue;
 }

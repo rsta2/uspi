@@ -243,12 +243,12 @@ static const char FromLAN7800[] = "lan7800";
 // starting at 10, to be sure to not collide with smsc951x driver
 static unsigned s_nDeviceNumber = 10;
 
-void LAN7800Device (TLAN7800Device *pThis, TUSBDevice *pDevice)
+void LAN7800Device (TLAN7800Device *pThis, TUSBFunction *pFunction)
 {
 	assert (pThis != 0);
 
-	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
-	pThis->m_USBDevice.Configure = LAN7800DeviceConfigure;
+	USBFunctionCopy (&pThis->m_USBFunction, pFunction);
+	pThis->m_USBFunction.Configure = LAN7800DeviceConfigure;
 
 	pThis->m_pEndpointBulkIn = 0;
 	pThis->m_pEndpointBulkOut = 0;
@@ -282,40 +282,25 @@ void _LAN7800Device (TLAN7800Device *pThis)
 		pThis->m_pEndpointBulkIn = 0;
 	}
 
-	_USBDevice (&pThis->m_USBDevice);
+	_USBFunction (&pThis->m_USBFunction);
 }
 
-boolean LAN7800DeviceConfigure (TUSBDevice *pUSBDevice)
+boolean LAN7800DeviceConfigure (TUSBFunction *pUSBFunction)
 {
-	TLAN7800Device *pThis = (TLAN7800Device *) pUSBDevice;
+	TLAN7800Device *pThis = (TLAN7800Device *) pUSBFunction;
 	assert (pThis != 0);
 
 	// check USB configuration
 
-	const TUSBConfigurationDescriptor *pConfigDesc =
-		(TUSBConfigurationDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_CONFIGURATION);
-	if (   pConfigDesc == 0
-	    || pConfigDesc->bNumInterfaces != 1)
+	if (USBFunctionGetNumEndpoints (&pThis->m_USBFunction) != 3)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromLAN7800);
-
-		return FALSE;
-	}
-
-	const TUSBInterfaceDescriptor *pInterfaceDesc =
-		(TUSBInterfaceDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_INTERFACE);
-	if (   pInterfaceDesc == 0
-	    || pInterfaceDesc->bInterfaceNumber	 != 0x00
-	    || pInterfaceDesc->bAlternateSetting != 0x00
-	    || pInterfaceDesc->bNumEndpoints	 != 3)
-	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromLAN7800);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromLAN7800);
 
 		return FALSE;
 	}
 
 	const TUSBEndpointDescriptor *pEndpointDesc;
-	while ((pEndpointDesc = (TUSBEndpointDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_ENDPOINT)) != 0)
+	while ((pEndpointDesc = (TUSBEndpointDescriptor *) USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_ENDPOINT)) != 0)
 	{
 		if ((pEndpointDesc->bmAttributes & 0x3F) == 0x02)		// Bulk
 		{
@@ -323,27 +308,27 @@ boolean LAN7800DeviceConfigure (TUSBDevice *pUSBDevice)
 			{
 				if (pThis->m_pEndpointBulkIn != 0)
 				{
-					USBDeviceConfigurationError (&pThis->m_USBDevice, FromLAN7800);
+					USBFunctionConfigurationError (&pThis->m_USBFunction, FromLAN7800);
 
 					return FALSE;
 				}
 
 				pThis->m_pEndpointBulkIn = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
 				assert (pThis->m_pEndpointBulkIn);
-				USBEndpoint2 (pThis->m_pEndpointBulkIn, &pThis->m_USBDevice, pEndpointDesc);
+				USBEndpoint2 (pThis->m_pEndpointBulkIn, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
 			}
 			else							// Output
 			{
 				if (pThis->m_pEndpointBulkOut != 0)
 				{
-					USBDeviceConfigurationError (&pThis->m_USBDevice, FromLAN7800);
+					USBFunctionConfigurationError (&pThis->m_USBFunction, FromLAN7800);
 
 					return FALSE;
 				}
 
 				pThis->m_pEndpointBulkOut = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
 				assert (pThis->m_pEndpointBulkOut);
-				USBEndpoint2 (pThis->m_pEndpointBulkOut, &pThis->m_USBDevice, pEndpointDesc);
+				USBEndpoint2 (pThis->m_pEndpointBulkOut, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
 			}
 		}
 	}
@@ -351,14 +336,14 @@ boolean LAN7800DeviceConfigure (TUSBDevice *pUSBDevice)
 	if (   pThis->m_pEndpointBulkIn  == 0
 	    || pThis->m_pEndpointBulkOut == 0)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromLAN7800);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromLAN7800);
 
 		return FALSE;
 	}
 
-	if (!USBDeviceConfigure (&pThis->m_USBDevice))
+	if (!USBFunctionConfigure (&pThis->m_USBFunction))
 	{
-		LogWrite (FromLAN7800, LOG_ERROR, "Cannot set configuration");
+		LogWrite (FromLAN7800, LOG_ERROR, "Cannot set interface");
 
 		return FALSE;
 	}
@@ -512,7 +497,7 @@ boolean LAN7800DeviceSendFrame (TLAN7800Device *pThis, const void *pBuffer, unsi
 	*(u32 *) &pThis->m_pTxBuffer[4] = 0;
 
 	assert (pThis->m_pEndpointBulkOut != 0);
-	return DWHCIDeviceTransfer (USBDeviceGetHost (&pThis->m_USBDevice), pThis->m_pEndpointBulkOut,
+	return DWHCIDeviceTransfer (USBFunctionGetHost (&pThis->m_USBFunction), pThis->m_pEndpointBulkOut,
 				    pThis->m_pTxBuffer, nLength+TX_HEADER_SIZE) >= 0;
 }
 
@@ -525,7 +510,7 @@ boolean LAN7800DeviceReceiveFrame (TLAN7800Device *pThis, void *pBuffer, unsigne
 	TUSBRequest URB;
 	USBRequest (&URB, pThis->m_pEndpointBulkIn, pBuffer, FRAME_BUFFER_SIZE, 0);
 
-	if (!DWHCIDeviceSubmitBlockingRequest (USBDeviceGetHost (&pThis->m_USBDevice), &URB))
+	if (!DWHCIDeviceSubmitBlockingRequest (USBFunctionGetHost (&pThis->m_USBFunction), &URB))
 	{
 		_USBRequest (&URB);
 
@@ -752,8 +737,8 @@ boolean LAN7800DeviceWriteReg (TLAN7800Device *pThis, u32 nIndex, u32 nValue)
 {
 	assert (pThis != 0);
 
-	if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-				       USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+	if (DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+				       USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
 				       REQUEST_OUT | REQUEST_VENDOR, WRITE_REGISTER,
 				       0, nIndex, &nValue, sizeof nValue) < 0)
 	{
@@ -769,8 +754,8 @@ boolean LAN7800DeviceReadReg (TLAN7800Device *pThis, u32 nIndex, u32 *pValue)
 {
 	assert (pThis != 0);
 
-	if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-				       USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+	if (DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+				       USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
 				       REQUEST_IN | REQUEST_VENDOR, READ_REGISTER,
 				       0, nIndex, pValue, sizeof *pValue) != (int) sizeof *pValue)
 	{

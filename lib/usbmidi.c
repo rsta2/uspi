@@ -2,7 +2,7 @@
 // usbmidi.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2016  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2016-2018  R. Stange <rsta2@o2online.de>
 // Copyright (C) 2016  J. Otto <joshua.t.otto@gmail.com>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -41,12 +41,12 @@ static const unsigned cin_to_length[] = {
 
 #define EVENT_PACKET_SIZE 4
 
-void USBMIDIDevice (TUSBMIDIDevice *pThis, TUSBDevice *pDevice)
+void USBMIDIDevice (TUSBMIDIDevice *pThis, TUSBFunction *pDevice)
 {
 	assert (pThis != 0);
 
-	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
-	pThis->m_USBDevice.Configure = USBMIDIDeviceConfigure;
+	USBFunctionCopy (&pThis->m_USBFunction, pDevice);
+	pThis->m_USBFunction.Configure = USBMIDIDeviceConfigure;
 
 	pThis->m_pEndpointIn = 0;
 	pThis->m_pPacketHandler = 0;
@@ -71,83 +71,68 @@ void _CUSBMIDIDevice (TUSBMIDIDevice *pThis)
 		pThis->m_pEndpointIn = 0;
 	}
 
-	_USBDevice (&pThis->m_USBDevice);
+	_USBFunction (&pThis->m_USBFunction);
 }
 
-boolean USBMIDIDeviceConfigure (TUSBDevice *pUSBDevice)
+boolean USBMIDIDeviceConfigure (TUSBFunction *pUSBFunction)
 {
-	TUSBMIDIDevice *pThis = (TUSBMIDIDevice *)pUSBDevice;
+	TUSBMIDIDevice *pThis = (TUSBMIDIDevice *)pUSBFunction;
 	assert (pThis != 0);
 
-	TUSBConfigurationDescriptor *pConfDesc =
-		(TUSBConfigurationDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_CONFIGURATION);
-	if (   pConfDesc == 0
-		|| pConfDesc->bNumInterfaces < 1)
+	if (USBFunctionGetNumEndpoints (&pThis->m_USBFunction) <  1)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromMIDI);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromMIDI);
 
 		return FALSE;
 	}
 
-	TUSBInterfaceDescriptor *pInterfaceDesc;
-	while ((pInterfaceDesc = (TUSBInterfaceDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_INTERFACE)) != 0)
+	// Our strategy for now is simple: we'll take the first MIDI streaming
+	// bulk-in endpoint on this interface we can find.  To distinguish
+	// between the MIDI streaming bulk-in endpoints we want (which carry
+	// actual MIDI data streams) and 'transfer bulk data' endpoints (which
+	// are used to implement features like Downloadable Samples that we
+	// don't care about), we'll look for an immediately-accompanying
+	// class-specific endpoint descriptor.
+	TUSBAudioEndpointDescriptor *pEndpointDesc;
+	while ((pEndpointDesc = (TUSBAudioEndpointDescriptor *) USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_ENDPOINT)) != 0)
 	{
-		if (   pInterfaceDesc->bNumEndpoints		==  0
-			|| pInterfaceDesc->bInterfaceClass		!= 0x01  // Audio class
-			|| pInterfaceDesc->bInterfaceSubClass	!= 0x03  // MIDI streaming
-			|| pInterfaceDesc->bInterfaceProtocol	!= 0x00) // unused, must be 0
+		if (   (pEndpointDesc->bEndpointAddress & 0x80) != 0x80		// Input EP
+		    || (pEndpointDesc->bmAttributes     & 0x3F) != 0x02)	// Bulk EP
 		{
 			continue;
 		}
 
-		// Our strategy for now is simple: we'll take the first MIDI streaming
-		// bulk-in endpoint on this interface we can find.  To distinguish
-		// between the MIDI streaming bulk-in endpoints we want (which carry
-		// actual MIDI data streams) and 'transfer bulk data' endpoints (which
-		// are used to implement features like Downloadable Samples that we
-		// don't care about), we'll look for an immediately-accompanying
-		// class-specific endpoint descriptor.
-		TUSBAudioEndpointDescriptor *pEndpointDesc;
-		while ((pEndpointDesc = (TUSBAudioEndpointDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_ENDPOINT)) != 0)
+		TUSBMIDIStreamingEndpointDescriptor *pMIDIDesc =
+			(TUSBMIDIStreamingEndpointDescriptor *) USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_CS_ENDPOINT);
+		if (   pMIDIDesc == 0
+		    || (u8 *)pEndpointDesc + pEndpointDesc->bLength != (u8 *)pMIDIDesc)
 		{
-			if (   (pEndpointDesc->bEndpointAddress & 0x80) != 0x80		// Input EP
-				|| (pEndpointDesc->bmAttributes     & 0x3F) != 0x02)	// Bulk EP
-			{
-				continue;
-			}
-
-			TUSBMIDIStreamingEndpointDescriptor *pMIDIDesc =
-				(TUSBMIDIStreamingEndpointDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_CS_ENDPOINT);
-			if (   pMIDIDesc == 0
-				|| (u8 *)pEndpointDesc + pEndpointDesc->bLength != (u8 *)pMIDIDesc)
-			{
-				continue;
-			}
-
-			assert (pThis->m_pEndpointIn == 0);
-			pThis->m_pEndpointIn = malloc (sizeof (TUSBEndpoint));
-			assert (pThis->m_pEndpointIn != 0);
-
-			pThis->m_usBufferSize = pEndpointDesc->wMaxPacketSize;
-			pThis->m_usBufferSize -= pEndpointDesc->wMaxPacketSize % EVENT_PACKET_SIZE;
-			assert (pThis->m_pPacketBuffer == 0);
-			pThis->m_pPacketBuffer = malloc (pThis->m_usBufferSize);
-			assert (pThis->m_pPacketBuffer != 0);
-
-			USBEndpoint2 (pThis->m_pEndpointIn, &pThis->m_USBDevice, (TUSBEndpointDescriptor *) pEndpointDesc);
+			continue;
 		}
+
+		assert (pThis->m_pEndpointIn == 0);
+		pThis->m_pEndpointIn = malloc (sizeof (TUSBEndpoint));
+		assert (pThis->m_pEndpointIn != 0);
+
+		pThis->m_usBufferSize = pEndpointDesc->wMaxPacketSize;
+		pThis->m_usBufferSize -= pEndpointDesc->wMaxPacketSize % EVENT_PACKET_SIZE;
+		assert (pThis->m_pPacketBuffer == 0);
+		pThis->m_pPacketBuffer = malloc (pThis->m_usBufferSize);
+		assert (pThis->m_pPacketBuffer != 0);
+
+		USBEndpoint2 (pThis->m_pEndpointIn, USBFunctionGetDevice (&pThis->m_USBFunction), (TUSBEndpointDescriptor *) pEndpointDesc);
 	}
 
 	if (pThis->m_pEndpointIn == 0)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromMIDI);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromMIDI);
 
 		return FALSE;
 	}
 
-	if (!USBDeviceConfigure (&pThis->m_USBDevice))
+	if (!USBFunctionConfigure (&pThis->m_USBFunction))
 	{
-		LogWrite (FromMIDI, LOG_ERROR, "Cannot set configuration");
+		LogWrite (FromMIDI, LOG_ERROR, "Cannot set interface");
 
 		return FALSE;
 	}
@@ -182,7 +167,7 @@ boolean USBMIDIDeviceStartRequest (TUSBMIDIDevice *pThis)
 	USBRequest (pThis->m_pURB, pThis->m_pEndpointIn, pThis->m_pPacketBuffer, pThis->m_usBufferSize, 0);
 	USBRequestSetCompletionRoutine (pThis->m_pURB, USBMIDIDeviceCompletionRoutine, 0, pThis);
 
-	return DWHCIDeviceSubmitAsyncRequest (USBDeviceGetHost (&pThis->m_USBDevice), pThis->m_pURB);
+	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), pThis->m_pURB);
 }
 
 void USBMIDIDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext)

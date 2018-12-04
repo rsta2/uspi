@@ -2,7 +2,7 @@
 // usbstandardhub.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,12 +17,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _usbstandardhub_h
-#define _usbstandardhub_h
+#ifndef _uspi_usbstandardhub_h
+#define _uspi_usbstandardhub_h
 
 #include <uspi/usb.h>
 #include <uspi/usbhub.h>
-#include <uspi/usbdevice.h>
+#include <uspi/usbfunction.h>
 #include <uspi/usbhostcontroller.h>
 #include <uspi/string.h>
 #include <uspi/types.h>
@@ -33,7 +33,7 @@ extern "C" {
 
 typedef struct TUSBStandardHub
 {
-	TUSBDevice m_USBDevice;
+	TUSBFunction m_USBFunction;
 
 	TUSBHubDescriptor *m_pHubDesc;
 
@@ -43,13 +43,11 @@ typedef struct TUSBStandardHub
 }
 TUSBStandardHub;
 
-void USBStandardHub (TUSBStandardHub *pThis, TUSBDevice *pDevice);
+void USBStandardHub (TUSBStandardHub *pThis, TUSBFunction *pFunction);
 void _USBStandardHub (TUSBStandardHub *pThis);
 
 boolean USBStandardHubInitialize (TUSBStandardHub *pThis);
-boolean USBStandardHubConfigure (TUSBDevice *pUSBDevice);
-
-TString *USBStandardHubGetDeviceNames (TUSBDevice *pDevice);
+boolean USBStandardHubConfigure (TUSBFunction *pUSBFunction);
 
 #ifdef __cplusplus
 }

@@ -412,8 +412,7 @@ u8 DWHCITransferStageDataGetHubPortAddress (TDWHCITransferStageData *pThis)
 
 u8 DWHCITransferStageDataGetSplitPosition (TDWHCITransferStageData *pThis)
 {
-	assert (pThis != 0);
-	assert (pThis->m_nTransferSize <= 188);		// TODO
+	// only important for isochronous transfers
 	return DWHCI_HOST_CHAN_SPLIT_CTRL_ALL;
 }
 

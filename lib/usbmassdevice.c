@@ -2,7 +2,7 @@
 // usbmassdevice.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -195,12 +195,12 @@ int USBBulkOnlyMassStorageDeviceCommand (TUSBBulkOnlyMassStorageDevice *pThis,
 					 void *pBuffer, unsigned nBufLen, boolean bIn);
 int USBBulkOnlyMassStorageDeviceReset (TUSBBulkOnlyMassStorageDevice *pThis);
 
-void USBBulkOnlyMassStorageDevice (TUSBBulkOnlyMassStorageDevice *pThis, TUSBDevice *pDevice)
+void USBBulkOnlyMassStorageDevice (TUSBBulkOnlyMassStorageDevice *pThis, TUSBFunction *pDevice)
 {
 	assert (pThis != 0);
 
-	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
-	pThis->m_USBDevice.Configure = USBBulkOnlyMassStorageDeviceConfigure;
+	USBFunctionCopy (&pThis->m_USBFunction, pDevice);
+	pThis->m_USBFunction.Configure = USBBulkOnlyMassStorageDeviceConfigure;
 
 	pThis->m_pEndpointIn = 0;
 	pThis->m_pEndpointOut = 0;
@@ -227,41 +227,23 @@ void _USBBulkOnlyMassStorageDevice (TUSBBulkOnlyMassStorageDevice *pThis)
 		pThis->m_pEndpointIn =  0;
 	}
 	
-	_USBDevice (&pThis->m_USBDevice);
+	_USBFunction (&pThis->m_USBFunction);
 }
 
-boolean USBBulkOnlyMassStorageDeviceConfigure (TUSBDevice *pUSBDevice)
+boolean USBBulkOnlyMassStorageDeviceConfigure (TUSBFunction *pUSBFunction)
 {
-	TUSBBulkOnlyMassStorageDevice *pThis = (TUSBBulkOnlyMassStorageDevice *) pUSBDevice;
+	TUSBBulkOnlyMassStorageDevice *pThis = (TUSBBulkOnlyMassStorageDevice *) pUSBFunction;
 	assert (pThis != 0);
 
-	TUSBConfigurationDescriptor *pConfDesc =
-		(TUSBConfigurationDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_CONFIGURATION);
-	if (   pConfDesc == 0
-	    || pConfDesc->bNumInterfaces <  1)
+	if (USBFunctionGetNumEndpoints (&pThis->m_USBFunction) < 2)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromUmsd);
-
-		return FALSE;
-	}
-
-	TUSBInterfaceDescriptor *pInterfaceDesc =
-		(TUSBInterfaceDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_INTERFACE);
-	if (   pInterfaceDesc == 0
-	    || pInterfaceDesc->bInterfaceNumber		!= 0x00
-	    || pInterfaceDesc->bAlternateSetting	!= 0x00
-	    || pInterfaceDesc->bNumEndpoints		<  2
-	    || pInterfaceDesc->bInterfaceClass		!= 0x08		// Mass Storage Class
-	    || pInterfaceDesc->bInterfaceSubClass	!= 0x06		// SCSI Transparent Command Set
-	    || pInterfaceDesc->bInterfaceProtocol	!= 0x50)	// Bulk-Only Transport
-	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromUmsd);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUmsd);
 
 		return FALSE;
 	}
 
 	const TUSBEndpointDescriptor *pEndpointDesc;
-	while ((pEndpointDesc = (TUSBEndpointDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_ENDPOINT)) != 0)
+	while ((pEndpointDesc = (TUSBEndpointDescriptor *) USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_ENDPOINT)) != 0)
 	{
 		if ((pEndpointDesc->bmAttributes & 0x3F) == 0x02)		// Bulk
 		{
@@ -269,27 +251,27 @@ boolean USBBulkOnlyMassStorageDeviceConfigure (TUSBDevice *pUSBDevice)
 			{
 				if (pThis->m_pEndpointIn != 0)
 				{
-					USBDeviceConfigurationError (&pThis->m_USBDevice, FromUmsd);
+					USBFunctionConfigurationError (&pThis->m_USBFunction, FromUmsd);
 
 					return FALSE;
 				}
 
 				pThis->m_pEndpointIn = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
 				assert (pThis->m_pEndpointIn != 0);
-				USBEndpoint2 (pThis->m_pEndpointIn, &pThis->m_USBDevice, pEndpointDesc);
+				USBEndpoint2 (pThis->m_pEndpointIn, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
 			}
 			else							// Output
 			{
 				if (pThis->m_pEndpointOut != 0)
 				{
-					USBDeviceConfigurationError (&pThis->m_USBDevice, FromUmsd);
+					USBFunctionConfigurationError (&pThis->m_USBFunction, FromUmsd);
 
 					return FALSE;
 				}
 
 				pThis->m_pEndpointOut = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
 				assert (pThis->m_pEndpointOut != 0);
-				USBEndpoint2 (pThis->m_pEndpointOut, &pThis->m_USBDevice, pEndpointDesc);
+				USBEndpoint2 (pThis->m_pEndpointOut, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
 			}
 		}
 	}
@@ -297,14 +279,14 @@ boolean USBBulkOnlyMassStorageDeviceConfigure (TUSBDevice *pUSBDevice)
 	if (   pThis->m_pEndpointIn  == 0
 	    || pThis->m_pEndpointOut == 0)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromUmsd);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUmsd);
 
 		return FALSE;
 	}
 
-	if (!USBDeviceConfigure (&pThis->m_USBDevice))
+	if (!USBFunctionConfigure (&pThis->m_USBFunction))
 	{
-		LogWrite (FromUmsd, LOG_ERROR, "Cannot set configuration");
+		LogWrite (FromUmsd, LOG_ERROR, "Cannot set interface");
 
 		return FALSE;
 	}
@@ -600,7 +582,7 @@ int USBBulkOnlyMassStorageDeviceCommand (TUSBBulkOnlyMassStorageDevice *pThis,
 
 	memcpy (CBW.CBWCB, pCmdBlk, nCmdBlkLen);
 
-	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
+	TUSBHostController *pHost = USBFunctionGetHost (&pThis->m_USBFunction);
 	assert (pHost != 0);
 	
 	if (DWHCIDeviceTransfer (pHost, pThis->m_pEndpointOut, &CBW, sizeof CBW) < 0)
@@ -665,24 +647,24 @@ int USBBulkOnlyMassStorageDeviceReset (TUSBBulkOnlyMassStorageDevice *pThis)
 {
 	assert (pThis != 0);
 
-	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
+	TUSBHostController *pHost = USBFunctionGetHost (&pThis->m_USBFunction);
 	assert (pHost != 0);
 	
-	if (DWHCIDeviceControlMessage (pHost, USBDeviceGetEndpoint0 (&pThis->m_USBDevice), 0x21, 0xFF, 0, 0x00, 0, 0) < 0)
+	if (DWHCIDeviceControlMessage (pHost, USBFunctionGetEndpoint0 (&pThis->m_USBFunction), 0x21, 0xFF, 0, 0x00, 0, 0) < 0)
 	{
 		LogWrite (FromUmsd, LOG_DEBUG, "Cannot reset device");
 
 		return -1;
 	}
 
-	if (DWHCIDeviceControlMessage (pHost, USBDeviceGetEndpoint0 (&pThis->m_USBDevice), 0x02, 1, 0, 1, 0, 0) < 0)
+	if (DWHCIDeviceControlMessage (pHost, USBFunctionGetEndpoint0 (&pThis->m_USBFunction), 0x02, 1, 0, 1, 0, 0) < 0)
 	{
 		LogWrite (FromUmsd, LOG_DEBUG, "Cannot clear halt on endpoint 1");
 
 		return -1;
 	}
 
-	if (DWHCIDeviceControlMessage (pHost, USBDeviceGetEndpoint0 (&pThis->m_USBDevice), 0x02, 1, 0, 2, 0, 0) < 0)
+	if (DWHCIDeviceControlMessage (pHost, USBFunctionGetEndpoint0 (&pThis->m_USBFunction), 0x02, 1, 0, 2, 0, 0) < 0)
 	{
 		LogWrite (FromUmsd, LOG_DEBUG, "Cannot clear halt on endpoint 2");
 

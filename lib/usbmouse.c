@@ -2,7 +2,7 @@
 // usbmouse.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -32,12 +32,12 @@ static const char FromUSBKbd[] = "umouse";
 static boolean USBMouseDeviceStartRequest (TUSBMouseDevice *pThis);
 static void USBMouseDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext);
 
-void USBMouseDevice (TUSBMouseDevice *pThis, TUSBDevice *pDevice)
+void USBMouseDevice (TUSBMouseDevice *pThis, TUSBFunction *pDevice)
 {
 	assert (pThis != 0);
 
-	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
-	pThis->m_USBDevice.Configure = USBMouseDeviceConfigure;
+	USBFunctionCopy (&pThis->m_USBFunction, pDevice);
+	pThis->m_USBFunction.Configure = USBMouseDeviceConfigure;
 
 	pThis->m_pReportEndpoint = 0;
 	pThis->m_pStatusHandler = 0;
@@ -65,42 +65,26 @@ void _CUSBMouseDevice (TUSBMouseDevice *pThis)
 		pThis->m_pReportEndpoint = 0;
 	}
 
-	_USBDevice (&pThis->m_USBDevice);
+	_USBFunction (&pThis->m_USBFunction);
 }
 
-boolean USBMouseDeviceConfigure (TUSBDevice *pUSBDevice)
+boolean USBMouseDeviceConfigure (TUSBFunction *pUSBFunction)
 {
-	TUSBMouseDevice *pThis = (TUSBMouseDevice *) pUSBDevice;
+	TUSBMouseDevice *pThis = (TUSBMouseDevice *) pUSBFunction;
 	assert (pThis != 0);
 
-	TUSBConfigurationDescriptor *pConfDesc =
-		(TUSBConfigurationDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_CONFIGURATION);
-	if (   pConfDesc == 0
-	    || pConfDesc->bNumInterfaces <  1)
+	if (USBFunctionGetNumEndpoints (&pThis->m_USBFunction) <  1)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromUSBKbd);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBKbd);
 
 		return FALSE;
 	}
 
-	TUSBInterfaceDescriptor *pInterfaceDesc;
-	while ((pInterfaceDesc = (TUSBInterfaceDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_INTERFACE)) != 0)
+	TUSBEndpointDescriptor *pEndpointDesc;
+	while ((pEndpointDesc =	(TUSBEndpointDescriptor *)
+		USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_ENDPOINT)) != 0)
 	{
-		if (   pInterfaceDesc->bNumEndpoints	  <  1
-		    || pInterfaceDesc->bInterfaceClass	  != 0x03	// HID Class
-		    || pInterfaceDesc->bInterfaceSubClass != 0x01	// Boot Interface Subclass
-		    || pInterfaceDesc->bInterfaceProtocol != 0x02)	// Mouse
-		{
-			continue;
-		}
-
-		pThis->m_ucInterfaceNumber  = pInterfaceDesc->bInterfaceNumber;
-		pThis->m_ucAlternateSetting = pInterfaceDesc->bAlternateSetting;
-
-		TUSBEndpointDescriptor *pEndpointDesc =
-			(TUSBEndpointDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_ENDPOINT);
-		if (   pEndpointDesc == 0
-		    || (pEndpointDesc->bEndpointAddress & 0x80) != 0x80		// Input EP
+		if (   (pEndpointDesc->bEndpointAddress & 0x80) != 0x80		// Input EP
 		    || (pEndpointDesc->bmAttributes     & 0x3F)	!= 0x03)	// Interrupt EP
 		{
 			continue;
@@ -109,44 +93,30 @@ boolean USBMouseDeviceConfigure (TUSBDevice *pUSBDevice)
 		assert (pThis->m_pReportEndpoint == 0);
 		pThis->m_pReportEndpoint = malloc (sizeof (TUSBEndpoint));
 		assert (pThis->m_pReportEndpoint != 0);
-		USBEndpoint2 (pThis->m_pReportEndpoint, &pThis->m_USBDevice, pEndpointDesc);
+		USBEndpoint2 (pThis->m_pReportEndpoint, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
 
 		break;
 	}
 
 	if (pThis->m_pReportEndpoint == 0)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromUSBKbd);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBKbd);
 
 		return FALSE;
 	}
 	
-	if (!USBDeviceConfigure (&pThis->m_USBDevice))
+	if (!USBFunctionConfigure (&pThis->m_USBFunction))
 	{
-		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set configuration");
+		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set interface");
 
 		return FALSE;
 	}
 
-	if (pThis->m_ucAlternateSetting != 0)
-	{
-		if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-					USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
-					REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
-					pThis->m_ucAlternateSetting,
-					pThis->m_ucInterfaceNumber, 0, 0) < 0)
-		{
-			LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set interface");
-
-			return FALSE;
-		}
-	}
-
-	if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-				       USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+	if (DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+				       USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
 				       REQUEST_OUT | REQUEST_CLASS | REQUEST_TO_INTERFACE,
 				       SET_PROTOCOL, BOOT_PROTOCOL,
-				       pThis->m_ucInterfaceNumber, 0, 0) < 0)
+				       USBFunctionGetInterfaceNumber (&pThis->m_USBFunction), 0, 0) < 0)
 	{
 		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set boot protocol");
 
@@ -183,7 +153,7 @@ boolean USBMouseDeviceStartRequest (TUSBMouseDevice *pThis)
 	USBRequest (pThis->m_pURB, pThis->m_pReportEndpoint, pThis->m_pReportBuffer, MOUSE_BOOT_REPORT_SIZE, 0);
 	USBRequestSetCompletionRoutine (pThis->m_pURB, USBMouseDeviceCompletionRoutine, 0, pThis);
 	
-	return DWHCIDeviceSubmitAsyncRequest (USBDeviceGetHost (&pThis->m_USBDevice), pThis->m_pURB);
+	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), pThis->m_pURB);
 }
 
 void USBMouseDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext)

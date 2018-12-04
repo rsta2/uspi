@@ -2,7 +2,7 @@
 // usbgamepad.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // Copyright (C) 2014  M. Maccaferri <macca@maccasoft.com>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -18,10 +18,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _usbgamepad_h
-#define _usbgamepad_h
+#ifndef _uspi_usbgamepad_h
+#define _uspi_usbgamepad_h
 
-#include <uspi/usbdevice.h>
+#include <uspi/usbfunction.h>
 #include <uspi/usbendpoint.h>
 #include <uspi/usbrequest.h>
 #include <uspi/usbhid.h>
@@ -30,11 +30,8 @@
 
 typedef struct TUSBGamePadDevice
 {
-	TUSBDevice m_USBDevice;
+	TUSBFunction m_USBFunction;
 	unsigned m_nDeviceIndex;
-
-	u8 m_ucInterfaceNumber;
-	u8 m_ucAlternateSetting;
 
 	TUSBEndpoint *m_pEndpointIn;
     TUSBEndpoint *m_pEndpointOut;
@@ -51,10 +48,10 @@ typedef struct TUSBGamePadDevice
 }
 TUSBGamePadDevice;
 
-void USBGamePadDevice (TUSBGamePadDevice *pThis, TUSBDevice *pDevice);
+void USBGamePadDevice (TUSBGamePadDevice *pThis, TUSBFunction *pFunction);
 void _CUSBGamePadDevice (TUSBGamePadDevice *pThis);
 
-boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice);
+boolean USBGamePadDeviceConfigure (TUSBFunction *pUSBFunction);
 
 void USBGamePadDeviceGetReport (TUSBGamePadDevice *pThis);
 void USBGamePadDeviceRegisterStatusHandler (TUSBGamePadDevice *pThis, TGamePadStatusHandler *pStatusHandler);

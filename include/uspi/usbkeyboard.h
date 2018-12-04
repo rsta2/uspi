@@ -2,7 +2,7 @@
 // usbkeyboard.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,10 +17,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _usbkeyboard_h
-#define _usbkeyboard_h
+#ifndef _uspi_usbkeyboard_h
+#define _uspi_usbkeyboard_h
 
-#include <uspi/usbdevice.h>
+#include <uspi/usbfunction.h>
 #include <uspi/usbendpoint.h>
 #include <uspi/usbrequest.h>
 #include <uspi/keymap.h>
@@ -38,10 +38,7 @@ typedef void TKeyStatusHandlerRaw (unsigned char	ucModifiers,	// see usbhid.h
 
 typedef struct TUSBKeyboardDevice
 {
-	TUSBDevice m_USBDevice;
-
-	u8 m_ucInterfaceNumber;
-	u8 m_ucAlternateSetting;
+	TUSBFunction m_USBFunction;
 
 	TUSBEndpoint *m_pReportEndpoint;
 
@@ -60,10 +57,10 @@ typedef struct TUSBKeyboardDevice
 }
 TUSBKeyboardDevice;
 
-void USBKeyboardDevice (TUSBKeyboardDevice *pThis, TUSBDevice *pDevice);
+void USBKeyboardDevice (TUSBKeyboardDevice *pThis, TUSBFunction *pFunction);
 void _CUSBKeyboardDevice (TUSBKeyboardDevice *pThis);
 
-boolean USBKeyboardDeviceConfigure (TUSBDevice *pUSBDevice);
+boolean USBKeyboardDeviceConfigure (TUSBFunction *pUSBFunction);
 
 // cooked mode
 void USBKeyboardDeviceRegisterKeyPressedHandler (TUSBKeyboardDevice *pThis, TKeyPressedHandler *pKeyPressedHandler);

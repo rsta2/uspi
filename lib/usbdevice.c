@@ -2,7 +2,7 @@
 // usbdevice.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,8 +20,10 @@
 #include <uspi/usbdevice.h>
 #include <uspi/dwhcidevice.h>
 #include <uspi/usbendpoint.h>
+#include <uspi/usbdevicefactory.h>
 #include <uspios.h>
 #include <uspi/util.h>
+#include <uspi/stdarg.h>
 #include <uspi/assert.h>
 
 #define MAX_CONFIG_DESC_SIZE		512		// best guess
@@ -39,16 +41,16 @@ static const char FromDevice[] = "usbdev";
 
 static u8 s_ucNextAddress = USB_FIRST_DEDICATED_ADDRESS;
 
-void USBDevice (TUSBDevice *pThis, struct TDWHCIDevice *pHost, TUSBSpeed Speed, u8 ucHubAddress, u8 ucHubPortNumber)
+void USBDevice (TUSBDevice *pThis, struct TDWHCIDevice *pHost, TUSBSpeed Speed,
+		boolean bSplitTransfer, u8 ucHubAddress, u8 ucHubPortNumber)
 {
 	assert (pThis != 0);
-
-	pThis->Configure = USBDeviceConfigure;
 
 	pThis->m_pHost = pHost;
 	pThis->m_ucAddress = USB_DEFAULT_ADDRESS;
 	pThis->m_Speed = Speed;
 	pThis->m_pEndpoint0 = 0;
+	pThis->m_bSplitTransfer = bSplitTransfer;
 	pThis->m_ucHubAddress = ucHubAddress;
 	pThis->m_ucHubPortNumber = ucHubPortNumber;
 	pThis->m_pDeviceDesc = 0;
@@ -66,64 +68,26 @@ void USBDevice (TUSBDevice *pThis, struct TDWHCIDevice *pHost, TUSBSpeed Speed, 
 
 	USBString (&pThis->m_ManufacturerString, pThis);
 	USBString (&pThis->m_ProductString, pThis);
-}
 
-void USBDeviceCopy (TUSBDevice *pThis, TUSBDevice *pDevice)
-{
-	assert (pThis != 0);
-
-	assert (pDevice != 0);
-
-	pThis->Configure = pDevice->Configure;
-
-	pThis->m_pEndpoint0 = 0;
-	pThis->m_pDeviceDesc = 0;
-	pThis->m_pConfigDesc = 0;
-	pThis->m_pConfigParser = 0;
-
-	pThis->m_pHost		 = pDevice->m_pHost;
-	pThis->m_ucAddress	 = pDevice->m_ucAddress;
-	pThis->m_Speed		 = pDevice->m_Speed;
-	pThis->m_ucHubAddress	 = pDevice->m_ucHubAddress;
-	pThis->m_ucHubPortNumber = pDevice->m_ucHubPortNumber;
-
-	USBStringCopy (&pThis->m_ManufacturerString, &pDevice->m_ManufacturerString);
-	USBStringCopy (&pThis->m_ProductString, &pDevice->m_ProductString);
-	
-	pThis->m_pEndpoint0 = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
-	assert (pThis->m_pEndpoint0 != 0);
-	USBEndpointCopy (pThis->m_pEndpoint0, pDevice->m_pEndpoint0, pThis);
-	
-	if (pDevice->m_pDeviceDesc != 0)
+	for (unsigned nFunction = 0; nFunction < USBDEV_MAX_FUNCTIONS; nFunction++)
 	{
-		pThis->m_pDeviceDesc = (TUSBDeviceDescriptor *) malloc (sizeof (TUSBDeviceDescriptor));
-		assert (pThis->m_pDeviceDesc != 0);
-
-		memcpy (pThis->m_pDeviceDesc, pDevice->m_pDeviceDesc, sizeof (TUSBDeviceDescriptor));
-	}
-
-	if (pDevice->m_pConfigDesc != 0)
-	{
-		unsigned nTotalLength = pDevice->m_pConfigDesc->wTotalLength;
-		assert (nTotalLength <= MAX_CONFIG_DESC_SIZE);
-
-		pThis->m_pConfigDesc = (TUSBConfigurationDescriptor *) malloc (nTotalLength);
-		assert (pThis->m_pConfigDesc != 0);
-
-		memcpy (pThis->m_pConfigDesc, pDevice->m_pConfigDesc, nTotalLength);
-
-		if (pDevice->m_pConfigParser != 0)
-		{
-			pThis->m_pConfigParser = (TUSBConfigurationParser *) malloc (sizeof (TUSBConfigurationParser));
-			assert (pThis->m_pConfigParser != 0);
-			USBConfigurationParser (pThis->m_pConfigParser, pThis->m_pConfigDesc, nTotalLength);
-		}
+		pThis->m_pFunction[nFunction] = 0;
 	}
 }
 
 void _USBDevice (TUSBDevice *pThis)
 {
 	assert (pThis != 0);
+
+	for (unsigned nFunction = 0; nFunction < USBDEV_MAX_FUNCTIONS; nFunction++)
+	{
+		if (pThis->m_pFunction[nFunction] != 0)
+		{
+			_USBFunction (pThis->m_pFunction[nFunction]);
+			free (pThis->m_pFunction[nFunction]);
+			pThis->m_pFunction[nFunction] = 0;
+		}
+	}
 
 	if (pThis->m_pConfigParser != 0)
 	{
@@ -151,8 +115,6 @@ void _USBDevice (TUSBDevice *pThis)
 		pThis->m_pEndpoint0 = 0;
 	}
 
-	pThis->Configure = 0;
-	
 	pThis->m_pHost = 0;
 
 	_USBString (&pThis->m_ProductString);
@@ -176,7 +138,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 				    pThis->m_pDeviceDesc, USB_DEFAULT_MAX_PACKET_SIZE, REQUEST_IN)
 	    != USB_DEFAULT_MAX_PACKET_SIZE)
 	{
-		LogWrite (FromDevice, LOG_ERROR, "Cannot get device descriptor (short)");
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Cannot get device descriptor (short)");
 
 		free (pThis->m_pDeviceDesc);
 		pThis->m_pDeviceDesc = 0;
@@ -187,7 +149,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 	if (   pThis->m_pDeviceDesc->bLength	     != sizeof *pThis->m_pDeviceDesc
 	    || pThis->m_pDeviceDesc->bDescriptorType != DESCRIPTOR_DEVICE)
 	{
-		LogWrite (FromDevice, LOG_ERROR, "Invalid device descriptor");
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Invalid device descriptor");
 
 		free (pThis->m_pDeviceDesc);
 		pThis->m_pDeviceDesc = 0;
@@ -202,7 +164,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 				    pThis->m_pDeviceDesc, sizeof *pThis->m_pDeviceDesc, REQUEST_IN)
 	    != (int) sizeof *pThis->m_pDeviceDesc)
 	{
-		LogWrite (FromDevice, LOG_ERROR, "Cannot get device descriptor");
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Cannot get device descriptor");
 
 		free (pThis->m_pDeviceDesc);
 		pThis->m_pDeviceDesc = 0;
@@ -217,15 +179,14 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 	u8 ucAddress = s_ucNextAddress++;
 	if (ucAddress > USB_MAX_ADDRESS)
 	{
-		LogWrite (FromDevice, LOG_ERROR, "Too many devices");
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Too many devices");
 
 		return FALSE;
 	}
 
 	if (!DWHCIDeviceSetAddress (pThis->m_pHost, pThis->m_pEndpoint0, ucAddress))
 	{
-		LogWrite (FromDevice, LOG_ERROR,
-			     "Cannot set address %u", (unsigned) ucAddress);
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Cannot set address %u", (unsigned) ucAddress);
 
 		return FALSE;
 	}
@@ -259,7 +220,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 				    pThis->m_pConfigDesc, sizeof *pThis->m_pConfigDesc, REQUEST_IN)
 	    != (int) sizeof *pThis->m_pConfigDesc)
 	{
-		LogWrite (FromDevice, LOG_ERROR, "Cannot get configuration descriptor (short)");
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Cannot get configuration descriptor (short)");
 
 		free (pThis->m_pConfigDesc);
 		pThis->m_pConfigDesc = 0;
@@ -271,7 +232,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 	    || pThis->m_pConfigDesc->bDescriptorType != DESCRIPTOR_CONFIGURATION
 	    || pThis->m_pConfigDesc->wTotalLength    >  MAX_CONFIG_DESC_SIZE)
 	{
-		LogWrite (FromDevice, LOG_ERROR, "Invalid configuration descriptor");
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Invalid configuration descriptor");
 		
 		free (pThis->m_pConfigDesc);
 		pThis->m_pConfigDesc = 0;
@@ -291,7 +252,7 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 				    pThis->m_pConfigDesc, nTotalLength, REQUEST_IN)
 	    != (int) nTotalLength)
 	{
-		LogWrite (FromDevice, LOG_ERROR, "Cannot get configuration descriptor");
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Cannot get configuration descriptor");
 
 		free (pThis->m_pConfigDesc);
 		pThis->m_pConfigDesc = 0;
@@ -315,6 +276,95 @@ boolean USBDeviceInitialize (TUSBDevice *pThis)
 		return FALSE;
 	}
 
+	TString *pNames	= USBDeviceGetNames (pThis);
+	assert (pNames != 0);
+	USBDeviceLogWrite (pThis, LOG_NOTICE, "Device %s found", StringGet (pNames));
+	_String (pNames);
+	 free (pNames);
+
+	unsigned nFunction = 0;
+	u8 ucInterfaceNumber = 0;
+
+	TUSBInterfaceDescriptor *pInterfaceDesc;
+	while ((pInterfaceDesc = (TUSBInterfaceDescriptor *) USBConfigurationParserGetDescriptor (pThis->m_pConfigParser, DESCRIPTOR_INTERFACE)) != 0)
+	{
+		if (pInterfaceDesc->bInterfaceNumber > ucInterfaceNumber)
+		{
+			ucInterfaceNumber = pInterfaceDesc->bInterfaceNumber;
+		}
+
+		if (pInterfaceDesc->bInterfaceNumber != ucInterfaceNumber)
+		{
+			USBDeviceLogWrite (pThis, LOG_DEBUG, "Alternate setting %u ignored",
+					   (unsigned) pInterfaceDesc->bAlternateSetting);
+
+			continue;
+		}
+
+		assert (pThis->m_pConfigParser != 0);
+		assert (pThis->m_pFunction[nFunction] == 0);
+		pThis->m_pFunction[nFunction] = (TUSBFunction *) malloc (sizeof (TUSBFunction));
+		assert (pThis->m_pFunction[nFunction] != 0);
+		USBFunction (pThis->m_pFunction[nFunction], pThis, pThis->m_pConfigParser);
+
+		TUSBFunction *pChild = 0;
+
+		if (nFunction == 0)
+		{
+			pChild = USBDeviceFactoryGetDevice (pThis->m_pFunction[nFunction], USBDeviceGetName (pThis, DeviceNameVendor));
+			if (pChild == 0)
+			{
+				pChild = USBDeviceFactoryGetDevice (pThis->m_pFunction[nFunction], USBDeviceGetName (pThis, DeviceNameDevice));
+			}
+		}
+
+		if (pChild == 0)
+		{
+			TString *pName = USBFunctionGetInterfaceName (pThis->m_pFunction[nFunction]);
+			assert (pName != 0);
+			if (StringCompare (pName, "unknown") != 0)
+			{
+				USBDeviceLogWrite (pThis, LOG_NOTICE, "Interface %s found", StringGet (pName));
+
+				pChild = USBDeviceFactoryGetDevice (pThis->m_pFunction[nFunction], pName);
+			}
+			else
+			{
+				_String (pName);
+				free (pName);
+			}
+		}
+
+		_USBFunction (pThis->m_pFunction[nFunction]);
+		free (pThis->m_pFunction[nFunction]);
+		pThis->m_pFunction[nFunction] = 0;
+
+		if (pChild == 0)
+		{
+			USBDeviceLogWrite (pThis, LOG_WARNING, "Function is not supported");
+
+			continue;
+		}
+
+		pThis->m_pFunction[nFunction] = pChild;
+
+		if (++nFunction == USBDEV_MAX_FUNCTIONS)
+		{
+			USBDeviceLogWrite (pThis, LOG_WARNING, "Too many functions per device");
+
+			break;
+		}
+
+		ucInterfaceNumber++;
+	}
+
+	if (nFunction == 0)
+	{
+		USBDeviceLogWrite (pThis, LOG_WARNING, "Device has no supported function");
+
+		return FALSE;
+	}
+
 	return TRUE;
 }
 
@@ -332,13 +382,34 @@ boolean USBDeviceConfigure (TUSBDevice *pThis)
 
 	if (!DWHCIDeviceSetConfiguration (pThis->m_pHost, pThis->m_pEndpoint0, pThis->m_pConfigDesc->bConfigurationValue))
 	{
-		LogWrite (FromDevice, LOG_ERROR, "Cannot set configuration (%u)",
+		USBDeviceLogWrite (pThis, LOG_ERROR, "Cannot set configuration (%u)",
 			     (unsigned) pThis->m_pConfigDesc->bConfigurationValue);
 
 		return FALSE;
 	}
 
-	return TRUE;
+	boolean bResult = FALSE;
+
+	for (unsigned nFunction = 0; nFunction < USBDEV_MAX_FUNCTIONS; nFunction++)
+	{
+		if (pThis->m_pFunction[nFunction] != 0)
+		{
+			if (!(*pThis->m_pFunction[nFunction]->Configure) (pThis->m_pFunction[nFunction]))
+			{
+				//LogWrite (LOG_ERROR, "Cannot configure device");
+
+				_USBFunction (pThis->m_pFunction[nFunction]);
+				free (pThis->m_pFunction[nFunction]);
+				pThis->m_pFunction[nFunction] = 0;
+			}
+			else
+			{
+				bResult = TRUE;
+			}
+		}
+	}
+
+	return bResult;
 }
 
 TString *USBDeviceGetName (TUSBDevice *pThis, TDeviceNameSelector Selector)
@@ -371,21 +442,6 @@ TString *USBDeviceGetName (TUSBDevice *pThis, TDeviceNameSelector Selector)
 				 (unsigned) pThis->m_pDeviceDesc->bDeviceProtocol);
 		break;
 		
-	case DeviceNameInterface: {
-		TConfigurationHeader *pConfig = (TConfigurationHeader *) pThis->m_pConfigDesc;
-		assert (pConfig != 0);
-		if (   pConfig->Configuration.wTotalLength < sizeof *pConfig
-		    || pConfig->Interface.bInterfaceClass == 0
-		    || pConfig->Interface.bInterfaceClass == 0xFF)
-		{
-			goto unknown;
-		}
-		StringFormat (pString, "int%x-%x-%x",
-				 (unsigned) pConfig->Interface.bInterfaceClass,
-				 (unsigned) pConfig->Interface.bInterfaceSubClass,
-				 (unsigned) pConfig->Interface.bInterfaceProtocol);
-		} break;
-
 	default:
 		assert (0);
 	unknown:
@@ -394,6 +450,41 @@ TString *USBDeviceGetName (TUSBDevice *pThis, TDeviceNameSelector Selector)
 	}
 	
 	return pString;
+}
+
+TString *USBDeviceGetNames (TUSBDevice *pThis)
+{
+	assert (pThis != 0);
+
+	TString *pResult = malloc (sizeof (TString));
+	assert (pResult != 0);
+	String (pResult);
+
+	for (unsigned nSelector = DeviceNameVendor; nSelector < DeviceNameUnknown; nSelector++)
+	{
+		TString *pName = USBDeviceGetName (pThis, (TDeviceNameSelector) nSelector);
+		assert (pName != 0);
+
+		if (StringCompare (pName, "unknown") != 0)
+		{
+			if (StringGetLength (pResult) > 0)
+			{
+				StringAppend (pResult, ", ");
+			}
+
+			StringAppend (pResult, StringGet (pName));
+		}
+
+		_String (pName);
+		free (pName);
+	}
+
+	if (StringGetLength (pResult) == 0)
+	{
+		StringSet (pResult, "unknown");
+	}
+
+	return pResult;
 }
 
 u8 USBDeviceGetAddress (TUSBDevice *pThis)
@@ -406,6 +497,12 @@ TUSBSpeed USBDeviceGetSpeed (TUSBDevice *pThis)
 {
 	assert (pThis != 0);
 	return pThis->m_Speed;
+}
+
+boolean USBDeviceIsSplit (TUSBDevice *pThis)
+{
+	assert (pThis != 0);
+	return pThis->m_bSplitTransfer;
 }
 
 u8 USBDeviceGetHubAddress (TUSBDevice *pThis)
@@ -469,5 +566,30 @@ void USBDeviceSetAddress (TUSBDevice *pThis, u8 ucAddress)
 	assert (ucAddress <= USB_MAX_ADDRESS);
 	pThis->m_ucAddress = ucAddress;
 
-	//LogWrite (FromDevice, LOG_DEBUG, "Device address set to %u", (unsigned) pThis->m_ucAddress);
+	//USBDeviceLogWrite (pThis, LOG_DEBUG, "Device address set to %u", (unsigned) pThis->m_ucAddress);
+}
+
+void USBDeviceLogWrite (TUSBDevice *pThis, unsigned Severity, const char *pMessage, ...)
+{
+	assert (pThis != 0);
+	assert (pMessage != 0);
+
+	TString Source;
+	String (&Source);
+	StringFormat (&Source, "%s%u-%u", FromDevice, (unsigned) pThis->m_ucHubAddress,
+		      (unsigned) pThis->m_ucHubPortNumber);
+
+	va_list var;
+	va_start (var, pMessage);
+
+	TString Message;
+	String (&Message);
+	StringFormatV (&Message, pMessage, var);
+
+	LogWrite (StringGet (&Source), Severity, StringGet (&Message));
+
+	va_end (var);
+
+	_String (&Message);
+	_String (&Source);
 }

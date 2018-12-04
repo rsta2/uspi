@@ -2,7 +2,7 @@
 // usbdevice.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 
 #include <uspi/usb.h>
 #include <uspi/usbconfigparser.h>
+#include <uspi/usbfunction.h>
 #include <uspi/usbstring.h>
 #include <uspi/string.h>
 #include <uspi/types.h>
@@ -30,11 +31,12 @@
 extern "C" {
 #endif
 
+#define USBDEV_MAX_FUNCTIONS	10
+
 typedef enum		// do not change this order
 {
 	DeviceNameVendor,
 	DeviceNameDevice,
-	DeviceNameInterface,
 	DeviceNameUnknown
 }
 TDeviceNameSelector;
@@ -44,14 +46,13 @@ struct TUSBEndpoint;
 
 typedef struct TUSBDevice
 {
-	boolean (*Configure) (struct TUSBDevice *pThis);
-
 	struct TDWHCIDevice *m_pHost;
 
 	u8		    m_ucAddress;
 	TUSBSpeed	    m_Speed;
 	struct TUSBEndpoint *m_pEndpoint0;
 
+	boolean		    m_bSplitTransfer;
 	u8		    m_ucHubAddress;
 	u8		    m_ucHubPortNumber;
 	
@@ -62,21 +63,25 @@ typedef struct TUSBDevice
 
 	TUSBString m_ManufacturerString;
 	TUSBString m_ProductString;
+
+	TUSBFunction *m_pFunction[USBDEV_MAX_FUNCTIONS];
 }
 TUSBDevice;
 
-void USBDevice (TUSBDevice *pThis, struct TDWHCIDevice *pHost, TUSBSpeed Speed, u8 ucHubAddress, u8 ucHubPortNumber);
-void USBDeviceCopy (TUSBDevice *pThis, TUSBDevice *pDevice);
+void USBDevice (TUSBDevice *pThis, struct TDWHCIDevice *pHost, TUSBSpeed Speed,
+		boolean bSplitTransfer, u8 ucHubAddress, u8 ucHubPortNumber);
 void _USBDevice (TUSBDevice *pThis);
 
 boolean USBDeviceInitialize (TUSBDevice *pThis);		// onto address state (phase 1)
 boolean USBDeviceConfigure (TUSBDevice *pThis);			// onto configured state (phase 2)
 
 TString *USBDeviceGetName (TUSBDevice *pThis, TDeviceNameSelector Selector);	// string deleted by caller
+TString *USBDeviceGetNames (TUSBDevice *pThis);					// string deleted by caller
 
 u8 USBDeviceGetAddress (TUSBDevice *pThis);
 TUSBSpeed USBDeviceGetSpeed (TUSBDevice *pThis);
 
+boolean USBDeviceIsSplit (TUSBDevice *pThis);
 u8 USBDeviceGetHubAddress (TUSBDevice *pThis);
 u8 USBDeviceGetHubPortNumber (TUSBDevice *pThis);
 
@@ -89,6 +94,8 @@ const TUSBConfigurationDescriptor *USBDeviceGetConfigurationDescriptor (TUSBDevi
 // get next sub descriptor of ucType from configuration descriptor
 const TUSBDescriptor *USBDeviceGetDescriptor (TUSBDevice *pThis, u8 ucType);	// returns 0 if not found
 void USBDeviceConfigurationError (TUSBDevice *pThis, const char *pSource);
+
+void USBDeviceLogWrite (TUSBDevice *pThis, unsigned Severity, const char *pMessage, ...);
 
 #ifdef __cplusplus
 }

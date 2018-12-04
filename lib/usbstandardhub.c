@@ -2,7 +2,7 @@
 // usbstandardhub.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -27,12 +27,12 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis);
 
 static const char FromHub[] = "usbhub";
 
-void USBStandardHub (TUSBStandardHub *pThis, TUSBDevice *pDevice)
+void USBStandardHub (TUSBStandardHub *pThis, TUSBFunction *pDevice)
 {
 	assert (pThis != 0);
 
-	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
-	pThis->m_USBDevice.Configure = USBStandardHubConfigure;
+	USBFunctionCopy (&pThis->m_USBFunction, pDevice);
+	pThis->m_USBFunction.Configure = USBStandardHubConfigure;
 	
 	pThis->m_pHubDesc = 0;
 	pThis->m_nPorts = 0;
@@ -72,110 +72,47 @@ void _USBStandardHub (TUSBStandardHub *pThis)
 		pThis->m_pHubDesc = 0;
 	}
 
-	_USBDevice (&pThis->m_USBDevice);
+	_USBFunction (&pThis->m_USBFunction);
 }
 
-boolean USBStandardHubInitialize (TUSBStandardHub *pThis)
+boolean USBStandardHubConfigure (TUSBFunction *pUSBFunction)
 {
-	assert (pThis != 0);
-	return USBDeviceInitialize (&pThis->m_USBDevice);
-}
-
-boolean USBStandardHubConfigure (TUSBDevice *pUSBDevice)
-{
-	TUSBStandardHub *pThis = (TUSBStandardHub *) pUSBDevice;
+	TUSBStandardHub *pThis = (TUSBStandardHub *) pUSBFunction;
 	assert (pThis != 0);
 
-	const TUSBDeviceDescriptor *pDeviceDesc = USBDeviceGetDeviceDescriptor (&pThis->m_USBDevice);
-	assert (pDeviceDesc != 0);
-
-	if (   pDeviceDesc->bDeviceClass       != USB_DEVICE_CLASS_HUB
-	    || pDeviceDesc->bDeviceSubClass    != 0
-	    || pDeviceDesc->bDeviceProtocol    != 2		// hub with multiple TTs
-	    || pDeviceDesc->bNumConfigurations != 1)
+	if (USBFunctionGetNumEndpoints (&pThis->m_USBFunction) != 1)
 	{
-		LogWrite (FromHub, LOG_ERROR, "Unsupported hub (proto %u)",
-			     (unsigned) pDeviceDesc->bDeviceProtocol);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromHub);
 
 		return FALSE;
 	}
 
-	const TUSBConfigurationDescriptor *pConfigDesc =
-		(TUSBConfigurationDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_CONFIGURATION);
-	if (   pConfigDesc == 0
-	    || pConfigDesc->bNumInterfaces != 1)
+	const TUSBEndpointDescriptor *pEndpointDesc =
+		(TUSBEndpointDescriptor *) USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_ENDPOINT);
+	if (   pEndpointDesc == 0
+	    || (pEndpointDesc->bEndpointAddress & 0x80) != 0x80		// input EP
+	    || (pEndpointDesc->bmAttributes     & 0x3F) != 0x03)	// interrupt EP
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromHub);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromHub);
 
 		return FALSE;
 	}
 
-	const TUSBInterfaceDescriptor *pInterfaceDesc;
-	while ((pInterfaceDesc = (TUSBInterfaceDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_INTERFACE)) != 0)
+	if (!USBFunctionConfigure (&pThis->m_USBFunction))
 	{
-		if (   pInterfaceDesc->bInterfaceClass    != USB_DEVICE_CLASS_HUB
-		    || pInterfaceDesc->bInterfaceSubClass != 0
-		    || pInterfaceDesc->bInterfaceProtocol != 2)
-		{
-			continue;
-		}
-
-		if (pInterfaceDesc->bNumEndpoints != 1)
-		{
-			USBDeviceConfigurationError (&pThis->m_USBDevice, FromHub);
-
-			return FALSE;
-		}
-
-		const TUSBEndpointDescriptor *pEndpointDesc =
-			(TUSBEndpointDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_ENDPOINT);
-		if (   pEndpointDesc == 0
-		    || (pEndpointDesc->bEndpointAddress & 0x80) != 0x80		// input EP
-		    || (pEndpointDesc->bmAttributes     & 0x3F) != 0x03)	// interrupt EP
-		{
-			USBDeviceConfigurationError (&pThis->m_USBDevice, FromHub);
-
-			return FALSE;
-		}
-
-		break;
-	}
-
-	if (pInterfaceDesc == 0)
-	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromHub);
+		LogWrite (FromHub, LOG_ERROR, "Cannot set interface");
 
 		return FALSE;
 	}
 
-	if (!USBDeviceConfigure (&pThis->m_USBDevice))
-	{
-		LogWrite (FromHub, LOG_ERROR, "Cannot set configuration");
-
-		return FALSE;
-	}
-
-	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
+	TUSBHostController *pHost = USBFunctionGetHost (&pThis->m_USBFunction);
 	assert (pHost != 0);
-
-	if (pInterfaceDesc->bAlternateSetting != 0)
-	{
-		if (DWHCIDeviceControlMessage (pHost, USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
-						REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
-						pInterfaceDesc->bAlternateSetting,
-						pInterfaceDesc->bInterfaceNumber, 0, 0) < 0)
-		{
-			LogWrite (FromHub, LOG_ERROR, "Cannot set interface");
-
-			return FALSE;
-		}
-	}
 
 	assert (pThis->m_pHubDesc == 0);
 	pThis->m_pHubDesc = (TUSBHubDescriptor *) malloc (sizeof (TUSBHubDescriptor));
 	assert (pThis->m_pHubDesc != 0);
 
-	if (DWHCIDeviceGetDescriptor (pHost, USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+	if (DWHCIDeviceGetDescriptor (pHost, USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
 					DESCRIPTOR_HUB, DESCRIPTOR_INDEX_DEFAULT,
 					pThis->m_pHubDesc, sizeof *pThis->m_pHubDesc,
 					REQUEST_IN | REQUEST_CLASS)
@@ -218,10 +155,10 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 {
 	assert (pThis != 0);
 
-	TUSBHostController *pHost = USBDeviceGetHost (&pThis->m_USBDevice);
+	TUSBHostController *pHost = USBFunctionGetHost (&pThis->m_USBFunction);
 	assert (pHost != 0);
 	
-	TUSBEndpoint *pEndpoint0 = USBDeviceGetEndpoint0 (&pThis->m_USBDevice);
+	TUSBEndpoint *pEndpoint0 = USBFunctionGetEndpoint0 (&pThis->m_USBFunction);
 	assert (pEndpoint0 != 0);
 
 	assert (pThis->m_nPorts > 0);
@@ -318,11 +255,29 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 			Speed = USBSpeedFull;
 		}
 
+		TUSBDevice *pHubDevice = USBFunctionGetDevice (&pThis->m_USBFunction);
+		assert (pHubDevice != 0);
+
+		boolean bSplit     = USBDeviceIsSplit (pHubDevice);
+		u8 ucHubAddress    = USBDeviceGetHubAddress (pHubDevice);
+		u8 ucHubPortNumber = USBDeviceGetHubPortNumber (pHubDevice);
+
+		// Is this the first high-speed hub with a non-high-speed device following in chain?
+		if (   !bSplit
+		    && USBDeviceGetSpeed (pHubDevice) == USBSpeedHigh
+		    && Speed < USBSpeedHigh)
+		{
+			// Then enable split transfers with this hub port as translator.
+			bSplit          = TRUE;
+			ucHubAddress    = USBDeviceGetAddress (pHubDevice);
+			ucHubPortNumber = nPort+1;
+		}
+
 		// first create default device
 		assert (pThis->m_pDevice[nPort] == 0);
 		pThis->m_pDevice[nPort] = malloc (sizeof (TUSBDevice));
 		assert (pThis->m_pDevice[nPort] != 0);
-		USBDevice (pThis->m_pDevice[nPort], pHost, Speed, USBDeviceGetAddress (&pThis->m_USBDevice), nPort+1);
+		USBDevice (pThis->m_pDevice[nPort], pHost, Speed, bSplit, ucHubAddress, ucHubPortNumber);
 
 		if (!USBDeviceInitialize (pThis->m_pDevice[nPort]))
 		{
@@ -332,14 +287,6 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 
 			continue;
 		}
-
-		TString *pNames = USBStandardHubGetDeviceNames (pThis->m_pDevice[nPort]);
-		assert (pNames != 0);
-
-		LogWrite (FromHub, LOG_NOTICE, "Port %u: Device %s found", nPort+1, StringGet (pNames));
-
-		_String (pNames);
-		free (pNames);
 	}
 
 	// now configure devices
@@ -350,31 +297,18 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 			continue;
 		}
 
-		// now create specific device from default device
-		TUSBDevice *pChild = USBDeviceFactoryGetDevice (pThis->m_pDevice[nPort]);
-		if (pChild != 0)
+		if (!USBDeviceConfigure (pThis->m_pDevice[nPort]))
 		{
-			_USBDevice (pThis->m_pDevice[nPort]);		// delete default device
-			free (pThis->m_pDevice[nPort]);
-			pThis->m_pDevice[nPort] = pChild;		// assign specific device
+			LogWrite (FromHub, LOG_ERROR, "Port %u: Cannot configure device", nPort+1);
 
-			if (!(*pThis->m_pDevice[nPort]->Configure) (pThis->m_pDevice[nPort]))
-			{
-				LogWrite (FromHub, LOG_ERROR, "Port %u: Cannot configure device", nPort+1);
-
-				continue;
-			}
-			
-			LogWrite (FromHub, LOG_DEBUG, "Port %u: Device configured", nPort+1);
-		}
-		else
-		{
-			LogWrite (FromHub, LOG_NOTICE, "Port %u: Device is not supported", nPort+1);
-			
 			_USBDevice (pThis->m_pDevice[nPort]);
 			free (pThis->m_pDevice[nPort]);
 			pThis->m_pDevice[nPort] = 0;
+
+			continue;
 		}
+
+		LogWrite (FromHub, LOG_DEBUG, "Port %u: Device configured", nPort+1);
 	}
 
 	// again check for over-current
@@ -435,39 +369,4 @@ boolean USBStandardHubEnumeratePorts (TUSBStandardHub *pThis)
 	}
 
 	return bResult;
-}
-
-TString *USBStandardHubGetDeviceNames (TUSBDevice *pDevice)
-{
-	assert (pDevice != 0);
-	
-	TString *pResult = (TString *) malloc (sizeof (TString));
-	assert (pResult != 0);
-	String (pResult);
-
-	for (unsigned nSelector = DeviceNameVendor; nSelector < DeviceNameUnknown; nSelector++)
-	{
-		TString *pName = USBDeviceGetName (pDevice, (TDeviceNameSelector) nSelector);
-		assert (pName != 0);
-
-		if (StringCompare (pName, "unknown") != 0)
-		{
-			if (StringGetLength (pResult) > 0)
-			{
-				StringAppend (pResult, ", ");
-			}
-
-			StringAppend (pResult, StringGet (pName));
-		}
-
-		_String (pName);
-		free (pName);
-	}
-
-	if (StringGetLength (pResult) == 0)
-	{
-		StringSet (pResult, "unknown");
-	}
-
-	return pResult;
 }

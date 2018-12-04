@@ -2,7 +2,7 @@
 // usbmassdevice.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
 #ifndef _uspi_usbmassdevice_h
 #define _uspi_usbmassdevice_h
 
-#include <uspi/usbdevice.h>
+#include <uspi/usbfunction.h>
 #include <uspi/usbendpoint.h>
 #include <uspi/types.h>
 
@@ -36,7 +36,7 @@ extern "C" {
 
 typedef struct TUSBBulkOnlyMassStorageDevice
 {
-	TUSBDevice m_USBDevice;
+	TUSBFunction m_USBFunction;
 
 	TUSBEndpoint *m_pEndpointIn;
 	TUSBEndpoint *m_pEndpointOut;
@@ -47,10 +47,10 @@ typedef struct TUSBBulkOnlyMassStorageDevice
 }
 TUSBBulkOnlyMassStorageDevice;
 
-void USBBulkOnlyMassStorageDevice (TUSBBulkOnlyMassStorageDevice *pThis, TUSBDevice *pDevice);
+void USBBulkOnlyMassStorageDevice (TUSBBulkOnlyMassStorageDevice *pThis, TUSBFunction *pFunction);
 void _USBBulkOnlyMassStorageDevice (TUSBBulkOnlyMassStorageDevice *pThis);
 
-boolean USBBulkOnlyMassStorageDeviceConfigure (TUSBDevice *pUSBDevice);
+boolean USBBulkOnlyMassStorageDeviceConfigure (TUSBFunction *pUSBFunction);
 
 int USBBulkOnlyMassStorageDeviceRead (TUSBBulkOnlyMassStorageDevice *pThis, void *pBuffer, unsigned nCount);
 int USBBulkOnlyMassStorageDeviceWrite (TUSBBulkOnlyMassStorageDevice *pThis, const void *pBuffer, unsigned nCount);
