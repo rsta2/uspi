@@ -2,7 +2,7 @@
 # Makefile
 #
 # USPi - An USB driver for Raspberry Pi written in C
-# Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+# Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,7 +33,12 @@ all: startup.o libuspienv.a
 startup.o: startup.S
 
 libuspienv.a: $(OBJS)
-	rm -f $@
-	$(AR) cr $@ $(OBJS)
+	@echo "  AR    $@"
+	@rm -f $@
+	@$(AR) cr $@ $(OBJS)
 
 include $(USPIHOME)/Rules.mk
+
+ifneq ($(strip $(AARCH64)),0)
+$(error AARCH64 is not supported in lib/env/)
+endif

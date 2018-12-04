@@ -42,10 +42,13 @@ AR	= $(PREFIX)ar
 ifeq ($(strip $(AARCH64)),0)
 ifeq ($(strip $(RASPPI)),1)
 ARCH	?= -march=armv6j -mtune=arm1176jzf-s -mfloat-abi=hard 
+TARGET	?= kernel
 else ifeq ($(strip $(RASPPI)),2)
 ARCH	?= -march=armv7-a -mtune=cortex-a7 -mfloat-abi=hard
+TARGET	?= kernel7
 else
 ARCH	?= -march=armv8-a -mtune=cortex-a53 -mfloat-abi=hard
+TARGET	?= kernel8-32
 endif
 else
 ARCH	?= -march=armv8-a -mtune=cortex-a53 -mlittle-endian -mcmodel=small -DAARCH64=1
@@ -58,10 +61,23 @@ CFLAGS	+= $(ARCH) -Wall -Wno-psabi -fsigned-char -fno-builtin -nostdinc -nostdli
 	   -std=gnu99 -undef -DRASPPI=$(RASPPI) -I $(USPIHOME)/include $(OPTIMIZE) #-DNDEBUG
 
 %.o: %.S
-	$(AS) $(AFLAGS) -c -o $@ $<
+	@echo "  AS    $@"
+	@$(AS) $(AFLAGS) -c -o $@ $<
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	@echo "  CC    $@"
+	@$(CC) $(CFLAGS) -c -o $@ $<
+
+$(TARGET).img: $(OBJS) $(LIBS)
+	@echo "  LD    $(TARGET).elf"
+	@$(LD) -o $(TARGET).elf -Map $(TARGET).map -T $(USPIHOME)/env/uspienv.ld \
+		$(USPIHOME)/env/lib/startup.o $(OBJS) $(LIBS)
+	@echo "  DUMP  $(TARGET).lst"
+	@$(PREFIX)objdump -D $(TARGET).elf > $(TARGET).lst
+	@echo "  COPY  $(TARGET).img"
+	@$(PREFIX)objcopy $(TARGET).elf -O binary $(TARGET).img
+	@echo -n "  WC    $(TARGET).img => "
+	@wc -c < $(TARGET).img
 
 clean:
 	rm -f *.o *.a *.elf *.lst *.img *.cir *.map *~ $(EXTRACLEAN)

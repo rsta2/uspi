@@ -28,7 +28,8 @@ OBJS	= uspilibrary.o \
 	  dwhciframeschednsplit.o usbgamepad.o synchronize.o usbstring.o usbmidi.o
 
 libuspi.a: $(OBJS)
-	rm -f libuspi.a
-	$(AR) cr libuspi.a $(OBJS)
+	@echo "  AR    $@"
+	@rm -f $@
+	@$(AR) cr $@ $(OBJS)
 
 include ../Rules.mk
