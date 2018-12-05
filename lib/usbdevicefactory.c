@@ -38,7 +38,8 @@ TUSBFunction *USBDeviceFactoryGetDevice (TUSBFunction *pParent, TString *pName)
 	
 	TUSBFunction *pResult = 0;
 
-	if (StringCompare (pName, "int9-0-2") == 0)
+	if (   StringCompare (pName, "int9-0-2") == 0
+	    || StringCompare (pName, "int9-0-0") == 0)
 	{
 		TUSBStandardHub *pDevice = (TUSBStandardHub *) malloc (sizeof (TUSBStandardHub));
 		assert (pDevice != 0);
