@@ -2,7 +2,7 @@
 // sysconfig.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2016  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@
 // system options
 #if RASPPI == 1			// valid on Raspberry Pi 1 only
 //#define ARM_DISABLE_MMU
-#define ARM_STRICT_ALIGNMENT
+//#define ARM_STRICT_ALIGNMENT
 #define GPU_L2_CACHE_ENABLED
 #else
 #define CORES			4					// must be a power of 2
