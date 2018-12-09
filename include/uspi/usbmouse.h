@@ -37,6 +37,9 @@ typedef struct TUSBMouseDevice
 
 	TMouseStatusHandler *m_pStatusHandler;
 
+	u16 m_usReportDescriptorLength;
+	u8 *m_pHIDReportDescriptor;
+
 	TUSBRequest *m_pURB;
 	u8 *m_pReportBuffer;
 }

@@ -27,7 +27,7 @@
 
 static unsigned s_nDeviceNumber = 1;
 
-static const char FromUSBKbd[] = "umouse";
+static const char FromUSBMouse[] = "umouse";
 
 static boolean USBMouseDeviceStartRequest (TUSBMouseDevice *pThis);
 static void USBMouseDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext);
@@ -46,11 +46,19 @@ void USBMouseDevice (TUSBMouseDevice *pThis, TUSBFunction *pDevice)
 
 	pThis->m_pReportBuffer = malloc (MOUSE_BOOT_REPORT_SIZE);
 	assert (pThis->m_pReportBuffer != 0);
+
+	pThis->m_pHIDReportDescriptor = 0;
 }
 
 void _CUSBMouseDevice (TUSBMouseDevice *pThis)
 {
 	assert (pThis != 0);
+
+	if (pThis->m_pHIDReportDescriptor != 0)
+	{
+		free (pThis->m_pHIDReportDescriptor);
+		pThis->m_pHIDReportDescriptor = 0;
+	}
 
 	if (pThis->m_pReportBuffer != 0)
 	{
@@ -75,7 +83,17 @@ boolean USBMouseDeviceConfigure (TUSBFunction *pUSBFunction)
 
 	if (USBFunctionGetNumEndpoints (&pThis->m_USBFunction) <  1)
 	{
-		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBKbd);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBMouse);
+
+		return FALSE;
+	}
+
+	TUSBHIDDescriptor *pHIDDesc = (TUSBHIDDescriptor *)
+		USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_HID);
+	if (   pHIDDesc == 0
+	    || pHIDDesc->wReportDescriptorLength == 0)
+	{
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBMouse);
 
 		return FALSE;
 	}
@@ -100,14 +118,32 @@ boolean USBMouseDeviceConfigure (TUSBFunction *pUSBFunction)
 
 	if (pThis->m_pReportEndpoint == 0)
 	{
-		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBKbd);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBMouse);
 
 		return FALSE;
 	}
 	
+	pThis->m_usReportDescriptorLength = pHIDDesc->wReportDescriptorLength;
+	pThis->m_pHIDReportDescriptor = (u8 *) malloc (pThis->m_usReportDescriptorLength);
+	assert (pThis->m_pHIDReportDescriptor != 0);
+
+	if (DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+				       USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
+				       REQUEST_IN | REQUEST_TO_INTERFACE, GET_DESCRIPTOR,
+				       (pHIDDesc->bReportDescriptorType << 8) | DESCRIPTOR_INDEX_DEFAULT,
+				       USBFunctionGetInterfaceNumber (&pThis->m_USBFunction),
+				       pThis->m_pHIDReportDescriptor, pThis->m_usReportDescriptorLength)
+	    != pThis->m_usReportDescriptorLength)
+	{
+		LogWrite (FromUSBMouse, LOG_ERROR, "Cannot get HID report descriptor");
+
+		return FALSE;
+	}
+	//DebugHexdump (pThis->m_pHIDReportDescriptor, pThis->m_usReportDescriptorLength, FromUSBMouse);
+
 	if (!USBFunctionConfigure (&pThis->m_USBFunction))
 	{
-		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set interface");
+		LogWrite (FromUSBMouse, LOG_ERROR, "Cannot set interface");
 
 		return FALSE;
 	}
@@ -118,7 +154,7 @@ boolean USBMouseDeviceConfigure (TUSBFunction *pUSBFunction)
 				       SET_PROTOCOL, BOOT_PROTOCOL,
 				       USBFunctionGetInterfaceNumber (&pThis->m_USBFunction), 0, 0) < 0)
 	{
-		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set boot protocol");
+		LogWrite (FromUSBMouse, LOG_ERROR, "Cannot set boot protocol");
 
 		return FALSE;
 	}
