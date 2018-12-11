@@ -125,6 +125,9 @@ int USPiEthernetAvailable (void);
 
 void USPiGetMACAddress (unsigned char Buffer[6]);
 
+// returns != 0 if link is up
+int USPiEthernetIsLinkUp (void);
+
 // returns 0 on failure
 int USPiSendFrame (const void *pBuffer, unsigned nLength);
 

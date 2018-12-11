@@ -2,7 +2,7 @@
 // smsc951x.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -53,7 +53,14 @@ boolean SMSC951xDeviceSendFrame (TSMSC951xDevice *pThis, const void *pBuffer, un
 // pBuffer must have size FRAME_BUFFER_SIZE
 boolean SMSC951xDeviceReceiveFrame (TSMSC951xDevice *pThis, void *pBuffer, unsigned *pResultLength);
 
+// returns TRUE if PHY link is up
+boolean SMSC951xDeviceIsLinkUp (TSMSC951xDevice *pThis);
+
 // private:
+boolean SMSC951xDevicePHYWrite (TSMSC951xDevice *pThis, u8 uchIndex, u16 usValue);
+boolean SMSC951xDevicePHYRead (TSMSC951xDevice *pThis, u8 uchIndex, u16 *pValue);
+boolean SMSC951xDevicePHYWaitNotBusy (TSMSC951xDevice *pThis);
+
 boolean SMSC951xDeviceWriteReg (TSMSC951xDevice *pThis, u32 nIndex, u32 nValue);
 boolean SMSC951xDeviceReadReg (TSMSC951xDevice *pThis, u32 nIndex, u32 *pValue);
 

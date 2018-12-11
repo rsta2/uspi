@@ -81,6 +81,18 @@ int main (void)
 
 	while (1)
 	{
+		MsDelay (2000);
+
+		if (USPiEthernetIsLinkUp ())
+		{
+			break;
+		}
+
+		LogWrite (FromSample, LOG_NOTICE, "Link is down");
+	}
+
+	while (1)
+	{
 		u8 Buffer[USPI_FRAME_BUFFER_SIZE];
 		unsigned nFrameLength;
 		if (!USPiReceiveFrame (Buffer, &nFrameLength))

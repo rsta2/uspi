@@ -235,6 +235,19 @@ void USPiGetMACAddress (unsigned char Buffer[6])
 	MACAddressCopyTo (pMACAddress, Buffer);
 }
 
+int USPiEthernetIsLinkUp (void)
+{
+	assert (s_pLibrary != 0);
+
+	if (s_pLibrary->pEth10 != 0)
+	{
+		return LAN7800DeviceIsLinkUp (s_pLibrary->pEth10) ? 1 : 0;
+	}
+
+	assert (s_pLibrary->pEth0 != 0);
+	return SMSC951xDeviceIsLinkUp (s_pLibrary->pEth0) ? 1 : 0;
+}
+
 int USPiSendFrame (const void *pBuffer, unsigned nLength)
 {
 	assert (s_pLibrary != 0);

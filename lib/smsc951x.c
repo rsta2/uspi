@@ -30,6 +30,7 @@
 #include <uspi/devicenameservice.h>
 #include <uspi/util.h>
 #include <uspi/assert.h>
+#include <uspios.h>
 
 // USB vendor requests
 #define WRITE_REGISTER			0xA0
@@ -294,8 +295,6 @@ boolean SMSC951xDeviceConfigure (TUSBFunction *pUSBFunction)
 		return FALSE;
 	}
 
-	// TODO: check if PHY is up (wait for it)
-
 	TString DeviceName;
 	String (&DeviceName);
 	StringFormat (&DeviceName, "eth%u", s_nDeviceNumber++);
@@ -387,6 +386,89 @@ boolean SMSC951xDeviceReceiveFrame (TSMSC951xDevice *pThis, void *pBuffer, unsig
 	*pResultLength = nFrameLength;
 	
 	_USBRequest (&URB);
+
+	return TRUE;
+}
+
+boolean SMSC951xDeviceIsLinkUp (TSMSC951xDevice *pThis)
+{
+	assert (pThis != 0);
+
+	u16 usPHYModeStatus;
+	if (!SMSC951xDevicePHYRead (pThis, 0x01, &usPHYModeStatus))
+	{
+		return FALSE;
+	}
+
+	return usPHYModeStatus & (1 << 2) ? TRUE : FALSE;
+}
+
+boolean SMSC951xDevicePHYWrite (TSMSC951xDevice *pThis, u8 uchIndex, u16 usValue)
+{
+	assert (pThis != 0);
+	assert (uchIndex <= 31);
+
+	if (   !SMSC951xDevicePHYWaitNotBusy (pThis)
+	    || !SMSC951xDeviceWriteReg (pThis, MII_DATA, usValue))
+	{
+		return FALSE;
+	}
+
+	u32 nMIIAddress = (PHY_ID_INTERNAL << 11) | ((u32) uchIndex << 6);
+	if (!SMSC951xDeviceWriteReg (pThis, MII_ADDR, nMIIAddress | MII_WRITE | MII_BUSY))
+	{
+		return FALSE;
+	}
+
+	return SMSC951xDevicePHYWaitNotBusy (pThis);
+}
+
+boolean SMSC951xDevicePHYRead (TSMSC951xDevice *pThis, u8 uchIndex, u16 *pValue)
+{
+	assert (pThis != 0);
+	assert (uchIndex <= 31);
+
+	if (!SMSC951xDevicePHYWaitNotBusy (pThis))
+	{
+		return FALSE;
+	}
+
+	u32 nMIIAddress = (PHY_ID_INTERNAL << 11) | ((u32) uchIndex << 6);
+	u32 nValue;
+	if (   !SMSC951xDeviceWriteReg (pThis, MII_ADDR, nMIIAddress | MII_BUSY)
+	    || !SMSC951xDevicePHYWaitNotBusy (pThis)
+	    || !SMSC951xDeviceReadReg (pThis, MII_DATA, &nValue))
+	{
+		return FALSE;
+	}
+
+	assert (pValue != 0);
+	*pValue = nValue & 0xFFFF;
+
+	return TRUE;
+}
+
+boolean SMSC951xDevicePHYWaitNotBusy (TSMSC951xDevice *pThis)
+{
+	assert (pThis != 0);
+
+	unsigned nTries = 1000;
+	u32 nValue;
+	do
+	{
+		MsDelay (1);
+
+		if (--nTries == 0)
+		{
+			return FALSE;
+		}
+
+		if (!SMSC951xDeviceReadReg (pThis, MII_ADDR, &nValue))
+		{
+			return FALSE;
+		}
+	}
+	while (nValue & MII_BUSY);
 
 	return TRUE;
 }
