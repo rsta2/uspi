@@ -57,7 +57,6 @@ void USBKeyboardDevice (TUSBKeyboardDevice *pThis, TUSBFunction *pDevice)
 	pThis->m_pSelectConsoleHandler = 0;
 	pThis->m_pShutdownHandler = 0;
 	pThis->m_pKeyStatusHandlerRaw = 0;
-	pThis->m_pURB = 0;
 	pThis->m_pReportBuffer = 0;
 	pThis->m_ucLastPhyCode = 0;
 	pThis->m_hTimer = 0;
@@ -280,13 +279,10 @@ boolean USBKeyboardDeviceStartRequest (TUSBKeyboardDevice *pThis)
 	assert (pThis->m_pReportEndpoint != 0);
 	assert (pThis->m_pReportBuffer != 0);
 	
-	assert (pThis->m_pURB == 0);
-	pThis->m_pURB = malloc (sizeof (TUSBRequest));
-	assert (pThis->m_pURB != 0);
-	USBRequest (pThis->m_pURB, pThis->m_pReportEndpoint, pThis->m_pReportBuffer, BOOT_REPORT_SIZE, 0);
-	USBRequestSetCompletionRoutine (pThis->m_pURB, USBKeyboardDeviceCompletionRoutine, 0, pThis);
+	USBRequest (&pThis->m_URB, pThis->m_pReportEndpoint, pThis->m_pReportBuffer, BOOT_REPORT_SIZE, 0);
+	USBRequestSetCompletionRoutine (&pThis->m_URB, USBKeyboardDeviceCompletionRoutine, 0, pThis);
 	
-	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), pThis->m_pURB);
+	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), &pThis->m_URB);
 }
 
 void USBKeyboardDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext)
@@ -295,7 +291,7 @@ void USBKeyboardDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *
 	assert (pThis != 0);
 	
 	assert (pURB != 0);
-	assert (pThis->m_pURB == pURB);
+	assert (&pThis->m_URB == pURB);
 
 	if (   USBRequestGetStatus (pURB) != 0
 	    && USBRequestGetResultLength (pURB) == BOOT_REPORT_SIZE)
@@ -338,9 +334,7 @@ void USBKeyboardDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *
 		}
 	}
 
-	_USBRequest (pThis->m_pURB);
-	free (pThis->m_pURB);
-	pThis->m_pURB = 0;
+	_USBRequest (&pThis->m_URB);
 	
 	USBKeyboardDeviceStartRequest (pThis);
 }

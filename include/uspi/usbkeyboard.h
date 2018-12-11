@@ -47,7 +47,7 @@ typedef struct TUSBKeyboardDevice
 	TShutdownHandler	*m_pShutdownHandler;
 	TKeyStatusHandlerRaw	*m_pKeyStatusHandlerRaw;
 
-	TUSBRequest *m_pURB;
+	TUSBRequest m_URB;
 	u8 *m_pReportBuffer;
 
 	u8 m_ucLastPhyCode;

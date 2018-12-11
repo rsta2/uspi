@@ -2,7 +2,7 @@
 // dwhcixferstagedata.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _uspi__dwhcixferstagedata_h
+#ifndef _uspi_dwhcixferstagedata_h
 #define _uspi_dwhcixferstagedata_h
 
 #include <uspi/usb.h>
@@ -25,6 +25,10 @@
 #include <uspi/usbdevice.h>
 #include <uspi/usbendpoint.h>
 #include <uspi/dwhciframescheduler.h>
+#include <uspi/dwhciframeschedper.h>
+#include <uspi/dwhciframeschednper.h>
+#include <uspi/dwhciframeschednsplit.h>
+#include <uspi/macros.h>
 #include <uspi/types.h>
 
 #ifdef __cplusplus
@@ -56,10 +60,18 @@ typedef struct TDWHCITransferStageData
 	unsigned	 m_nSubState;
 	u32		 m_nTransactionStatus;
 
-	u32		*m_pTempBuffer;
+	u32		 m_TempBuffer ALIGN (4);	// DMA buffer
 	void		*m_pBufferPointer;
 
-	TDWHCIFrameScheduler *m_pFrameScheduler;
+	boolean		 m_bFrameSchedulerUsed;
+	union
+	{
+		TDWHCIFrameScheduler		Base;
+		TDWHCIFrameSchedulerPeriodic	Periodic;
+		TDWHCIFrameSchedulerNonPeriodic	NonPeriodic;
+		TDWHCIFrameSchedulerNoSplit	NoSplit;
+	}
+	m_FrameScheduler;
 }
 TDWHCITransferStageData;
 

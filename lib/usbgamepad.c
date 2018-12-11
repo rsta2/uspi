@@ -91,7 +91,6 @@ void USBGamePadDevice (TUSBGamePadDevice *pThis, TUSBFunction *pDevice)
 	pThis->m_pEndpointIn = 0;
     pThis->m_pEndpointOut = 0;
     pThis->m_pStatusHandler = 0;
-	pThis->m_pURB = 0;
 	pThis->m_pHIDReportDescriptor = 0;
 	pThis->m_usReportDescriptorLength = 0;
     pThis->m_nReportSize = 0;
@@ -464,13 +463,10 @@ boolean USBGamePadDeviceStartRequest (TUSBGamePadDevice *pThis)
 	assert (pThis->m_pEndpointIn != 0);
 	assert (pThis->m_pReportBuffer != 0);
 
-	assert (pThis->m_pURB == 0);
-	pThis->m_pURB = malloc (sizeof (TUSBRequest));
-	assert (pThis->m_pURB != 0);
-	USBRequest (pThis->m_pURB, pThis->m_pEndpointIn, pThis->m_pReportBuffer, pThis->m_nReportSize, 0);
-	USBRequestSetCompletionRoutine (pThis->m_pURB, USBGamePadDeviceCompletionRoutine, 0, pThis);
+	USBRequest (&pThis->m_URB, pThis->m_pEndpointIn, pThis->m_pReportBuffer, pThis->m_nReportSize, 0);
+	USBRequestSetCompletionRoutine (&pThis->m_URB, USBGamePadDeviceCompletionRoutine, 0, pThis);
 
-	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), pThis->m_pURB);
+	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), &pThis->m_URB);
 }
 
 void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext)
@@ -479,7 +475,7 @@ void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *p
 	assert (pThis != 0);
 
 	assert (pURB != 0);
-	assert (pThis->m_pURB == pURB);
+	assert (&pThis->m_URB == pURB);
 
 	if (   USBRequestGetStatus (pURB) != 0
 	    && USBRequestGetResultLength (pURB) > 0)
@@ -492,9 +488,7 @@ void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *p
         }
 	}
 
-	_USBRequest (pThis->m_pURB);
-	free (pThis->m_pURB);
-	pThis->m_pURB = 0;
+	_USBRequest (&pThis->m_URB);
 
 	USBGamePadDeviceStartRequest (pThis);
 }

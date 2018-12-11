@@ -50,7 +50,6 @@ void USBMIDIDevice (TUSBMIDIDevice *pThis, TUSBFunction *pDevice)
 
 	pThis->m_pEndpointIn = 0;
 	pThis->m_pPacketHandler = 0;
-	pThis->m_pURB = 0;
 	pThis->m_pPacketBuffer = 0;
 }
 
@@ -161,13 +160,10 @@ boolean USBMIDIDeviceStartRequest (TUSBMIDIDevice *pThis)
 	assert (pThis->m_pEndpointIn != 0);
 	assert (pThis->m_pPacketBuffer != 0);
 
-	assert (pThis->m_pURB == 0);
-	pThis->m_pURB = malloc (sizeof (TUSBRequest));
-	assert (pThis->m_pURB != 0);
-	USBRequest (pThis->m_pURB, pThis->m_pEndpointIn, pThis->m_pPacketBuffer, pThis->m_usBufferSize, 0);
-	USBRequestSetCompletionRoutine (pThis->m_pURB, USBMIDIDeviceCompletionRoutine, 0, pThis);
+	USBRequest (&pThis->m_URB, pThis->m_pEndpointIn, pThis->m_pPacketBuffer, pThis->m_usBufferSize, 0);
+	USBRequestSetCompletionRoutine (&pThis->m_URB, USBMIDIDeviceCompletionRoutine, 0, pThis);
 
-	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), pThis->m_pURB);
+	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), &pThis->m_URB);
 }
 
 void USBMIDIDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext)
@@ -176,7 +172,7 @@ void USBMIDIDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pCon
 	assert (pThis != 0);
 
 	assert (pURB != 0);
-	assert (pThis->m_pURB == pURB);
+	assert (&pThis->m_URB == pURB);
 
 	if (   USBRequestGetStatus (pURB) != 0
 		&& USBRequestGetResultLength (pURB) % EVENT_PACKET_SIZE == 0)
@@ -201,9 +197,7 @@ void USBMIDIDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pCon
 		}
 	}
 
-	_USBRequest (pThis->m_pURB);
-	free (pThis->m_pURB);
-	pThis->m_pURB = 0;
+	_USBRequest (&pThis->m_URB);
 
 	USBMIDIDeviceStartRequest (pThis);
 }

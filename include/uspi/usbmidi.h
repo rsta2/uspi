@@ -36,7 +36,7 @@ typedef struct TUSBMIDIDevice
 
 	TMIDIPacketHandler *m_pPacketHandler;
 
-	TUSBRequest *m_pURB;
+	TUSBRequest m_URB;
 	u16 m_usBufferSize;
 	u8 *m_pPacketBuffer;
 }

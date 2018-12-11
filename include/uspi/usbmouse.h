@@ -40,7 +40,7 @@ typedef struct TUSBMouseDevice
 	u16 m_usReportDescriptorLength;
 	u8 *m_pHIDReportDescriptor;
 
-	TUSBRequest *m_pURB;
+	TUSBRequest m_URB;
 	u8 *m_pReportBuffer;
 }
 TUSBMouseDevice;
