@@ -111,11 +111,25 @@ void USPiKeyboardRegisterShutdownHandler (TUSPiShutdownHandler *pShutdownHandler
 	USBKeyboardDeviceRegisterShutdownHandler (s_pLibrary->pUKBD1, pShutdownHandler);
 }
 
+void USPiKeyboardUpdateLEDs (void)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUKBD1 != 0);
+	USBKeyboardDeviceUpdateLEDs (s_pLibrary->pUKBD1);
+}
+
 void USPiKeyboardRegisterKeyStatusHandlerRaw (TKeyStatusHandlerRaw *pKeyStatusHandlerRaw)
 {
 	assert (s_pLibrary != 0);
 	assert (s_pLibrary->pUKBD1 != 0);
 	USBKeyboardDeviceRegisterKeyStatusHandlerRaw (s_pLibrary->pUKBD1, pKeyStatusHandlerRaw);
+}
+
+void USPiKeyboardSetLEDs (unsigned char ucLEDMask)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUKBD1 != 0);
+	USBKeyboardDeviceSetLEDs (s_pLibrary->pUKBD1, ucLEDMask);
 }
 
 int USPiMouseAvailable (void)

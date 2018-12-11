@@ -54,6 +54,8 @@ typedef struct TUSBKeyboardDevice
 	unsigned m_hTimer;
 
 	TKeyMap m_KeyMap;
+
+	u8 m_ucLastLEDStatus;
 }
 TUSBKeyboardDevice;
 
@@ -67,7 +69,11 @@ void USBKeyboardDeviceRegisterKeyPressedHandler (TUSBKeyboardDevice *pThis, TKey
 void USBKeyboardDeviceRegisterSelectConsoleHandler (TUSBKeyboardDevice *pThis, TSelectConsoleHandler *pSelectConsoleHandler);
 void USBKeyboardDeviceRegisterShutdownHandler (TUSBKeyboardDevice *pThis, TShutdownHandler *pShutdownHandler);
 
+void USBKeyboardDeviceUpdateLEDs (TUSBKeyboardDevice *pThis);
+
 // raw mode (if this handler is registered the others are ignored)
 void USBKeyboardDeviceRegisterKeyStatusHandlerRaw (TUSBKeyboardDevice *pThis, TKeyStatusHandlerRaw *pKeyStatusHandlerRaw);
+
+void USBKeyboardDeviceSetLEDs (TUSBKeyboardDevice *pThis, u8 ucLEDMask);
 
 #endif

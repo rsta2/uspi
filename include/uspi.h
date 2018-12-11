@@ -4,7 +4,7 @@
 // Services provided by the USPi library
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -48,6 +48,9 @@ void USPiKeyboardRegisterKeyPressedHandler (TUSPiKeyPressedHandler *pKeyPressedH
 typedef void TUSPiShutdownHandler (void);
 void USPiKeyboardRegisterShutdownHandler (TUSPiShutdownHandler *pShutdownHandler);
 
+// Call this frequently from your application main loop to allow updating the keyboard LEDs.
+void USPiKeyboardUpdateLEDs (void);
+
 // "raw mode" (if this handler is registered the others are ignored)
 // The raw handler is called when the keyboard sends a status report (on status change and/or continously).
 typedef void TUSPiKeyStatusHandlerRaw (unsigned char	     ucModifiers,
@@ -63,6 +66,12 @@ void USPiKeyboardRegisterKeyStatusHandlerRaw (TUSPiKeyStatusHandlerRaw *pKeyStat
 #define RSHIFT		(1 << 5)
 #define ALTGR		(1 << 6)
 #define RWIN		(1 << 7)
+
+// Set the keyboard LEDs in "raw mode"
+void USPiKeyboardSetLEDs (unsigned char ucLEDMask);
+#define LED_NUM_LOCK	(1 << 0)
+#define LED_CAPS_LOCK	(1 << 1)
+#define LED_SCROLL_LOCK	(1 << 2)
 
 //
 // Mouse device

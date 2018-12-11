@@ -45,6 +45,8 @@ int main (void)
 	// just wait and turn the rotor
 	for (unsigned nCount = 0; 1; nCount++)
 	{
+		USPiKeyboardUpdateLEDs ();
+
 		ScreenDeviceRotor (USPiEnvGetScreen (), 0, nCount);
 	}
 

@@ -61,6 +61,7 @@ void USBKeyboardDevice (TUSBKeyboardDevice *pThis, TUSBFunction *pDevice)
 	pThis->m_pReportBuffer = 0;
 	pThis->m_ucLastPhyCode = 0;
 	pThis->m_hTimer = 0;
+	pThis->m_ucLastLEDStatus = 0;
 
 	KeyMap (&pThis->m_KeyMap);
 
@@ -145,17 +146,7 @@ boolean USBKeyboardDeviceConfigure (TUSBFunction *pUSBFunction)
 	}
 
 	// setting the LED status forces some keyboard adapters to work
-	u8 LEDs[1] ALIGN(4) = {0};	// DMA buffer
-	if (DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
-				       USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
-				       REQUEST_OUT | REQUEST_CLASS | REQUEST_TO_INTERFACE,
-				       SET_REPORT, (REPORT_TYPE_OUTPUT << 8) | 0,
-				       USBFunctionGetInterfaceNumber (&pThis->m_USBFunction), LEDs, sizeof LEDs) < 0)
-	{
-		LogWrite (FromUSBKbd, LOG_ERROR, "Cannot set LEDs");
-
-		return FALSE;
-	}
+	USBKeyboardDeviceSetLEDs (pThis, pThis->m_ucLastLEDStatus);
 
 	TString DeviceName;
 	String (&DeviceName);
@@ -188,11 +179,40 @@ void USBKeyboardDeviceRegisterShutdownHandler (TUSBKeyboardDevice *pThis, TShutd
 	pThis->m_pShutdownHandler = pShutdownHandler;
 }
 
+void USBKeyboardDeviceUpdateLEDs (TUSBKeyboardDevice *pThis)
+{
+	assert (pThis != 0);
+	u8 ucLEDStatus = KeyMapGetLEDStatus (&pThis->m_KeyMap);
+	if (ucLEDStatus != pThis->m_ucLastLEDStatus)
+	{
+		USBKeyboardDeviceSetLEDs (pThis, ucLEDStatus);
+
+		pThis->m_ucLastLEDStatus = ucLEDStatus;
+	}
+}
+
 void USBKeyboardDeviceRegisterKeyStatusHandlerRaw (TUSBKeyboardDevice *pThis, TKeyStatusHandlerRaw *pKeyStatusHandlerRaw)
 {
 	assert (pThis != 0);
 	assert (pKeyStatusHandlerRaw != 0);
 	pThis->m_pKeyStatusHandlerRaw = pKeyStatusHandlerRaw;
+}
+
+void USBKeyboardDeviceSetLEDs (TUSBKeyboardDevice *pThis, u8 ucLEDMask)
+{
+	assert (pThis != 0);
+
+	u8 LEDs[1] ALIGN(4) = {ucLEDMask};	// DMA buffer
+
+	if (DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+				       USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
+				       REQUEST_OUT | REQUEST_CLASS | REQUEST_TO_INTERFACE,
+				       SET_REPORT, (REPORT_TYPE_OUTPUT << 8) | 0,
+				       USBFunctionGetInterfaceNumber (&pThis->m_USBFunction),
+				       LEDs, sizeof LEDs) < 0)
+	{
+		LogWrite (FromUSBKbd, LOG_WARNING, "Cannot set LEDs");
+	}
 }
 
 void USBKeyboardDeviceGenerateKeyEvent (TUSBKeyboardDevice *pThis, u8 ucPhyCode)
