@@ -2,7 +2,7 @@
 // dwhcidevice.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,8 +17,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _dwhcidevice_h
-#define _dwhcidevice_h
+#ifndef _uspi_dwhcidevice_h
+#define _uspi_dwhcidevice_h
 
 #include <uspi/usb.h>
 #include <uspi/usbendpoint.h>
@@ -40,7 +40,7 @@ typedef struct TDWHCIDevice
 	unsigned m_nChannels;
 	volatile unsigned m_nChannelAllocated;		// one bit per channel, set if allocated
 
-	TDWHCITransferStageData *m_pStageData[DWHCI_MAX_CHANNELS];
+	TDWHCITransferStageData m_StageData[DWHCI_MAX_CHANNELS];
 
 	volatile boolean m_bWaiting;
 

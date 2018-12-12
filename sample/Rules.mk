@@ -6,7 +6,7 @@
 # 	which is Copyright (c) 2012 David Welch dwelch@dwelch.com
 #
 # USPi - An USB driver for Raspberry Pi written in C
-# Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+# Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 # 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,10 +28,8 @@ endif
 
 CFLAGS	+= -I $(USPIHOME)/env/include
 
-kernel.img: $(OBJS) $(LIBS)
-	$(LD) -o kernel.elf -Map kernel.map -T $(USPIHOME)/env/uspienv.ld $(USPIHOME)/env/lib/startup.o $(OBJS) $(LIBS)
-	$(PREFIX)objdump -D kernel.elf > kernel.lst
-	$(PREFIX)objcopy kernel.elf -O binary kernel.img
-	wc -c kernel.img
-
 include $(USPIHOME)/Rules.mk
+
+ifneq ($(strip $(AARCH64)),0)
+$(error AARCH64 is not supported in sample/)
+endif

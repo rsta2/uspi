@@ -20,6 +20,7 @@
 #ifndef _uspi_lan7800_h
 #define _uspi_lan7800_h
 
+#include <uspi/usbfunction.h>
 #include <uspi/usbendpoint.h>
 #include <uspi/usbrequest.h>
 #include <uspi/macaddress.h>
@@ -29,7 +30,7 @@
 
 typedef struct TLAN7800Device
 {
-	TUSBDevice m_USBDevice;
+	TUSBFunction m_USBFunction;
 
 	TUSBEndpoint *m_pEndpointBulkIn;
 	TUSBEndpoint *m_pEndpointBulkOut;
@@ -40,10 +41,10 @@ typedef struct TLAN7800Device
 }
 TLAN7800Device;
 
-void LAN7800Device (TLAN7800Device *pThis, TUSBDevice *pDevice);
+void LAN7800Device (TLAN7800Device *pThis, TUSBFunction *pFunction);
 void _LAN7800Device (TLAN7800Device *pThis);
 
-boolean LAN7800DeviceConfigure (TUSBDevice *pUSBDevice);
+boolean LAN7800DeviceConfigure (TUSBFunction *pUSBFunction);
 
 TMACAddress *LAN7800DeviceGetMACAddress (TLAN7800Device *pThis);
 

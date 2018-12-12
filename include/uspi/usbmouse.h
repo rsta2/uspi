@@ -2,7 +2,7 @@
 // usbmouse.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,10 +17,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _usbmouse_h
-#define _usbmouse_h
+#ifndef _uspi_usbmouse_h
+#define _uspi_usbmouse_h
 
-#include <uspi/usbdevice.h>
+#include <uspi/usbfunction.h>
 #include <uspi/usbendpoint.h>
 #include <uspi/usbrequest.h>
 #include <uspi/types.h>
@@ -31,24 +31,24 @@ typedef void TMouseStatusHandler (unsigned nButtons, int nDisplacementX, int nDi
 
 typedef struct TUSBMouseDevice
 {
-	TUSBDevice m_USBDevice;
-
-	u8 m_ucInterfaceNumber;
-	u8 m_ucAlternateSetting;
+	TUSBFunction m_USBFunction;
 
 	TUSBEndpoint *m_pReportEndpoint;
 
 	TMouseStatusHandler *m_pStatusHandler;
 
-	TUSBRequest *m_pURB;
+	u16 m_usReportDescriptorLength;
+	u8 *m_pHIDReportDescriptor;
+
+	TUSBRequest m_URB;
 	u8 *m_pReportBuffer;
 }
 TUSBMouseDevice;
 
-void USBMouseDevice (TUSBMouseDevice *pThis, TUSBDevice *pDevice);
+void USBMouseDevice (TUSBMouseDevice *pThis, TUSBFunction *pFunction);
 void _CUSBMouseDevice (TUSBMouseDevice *pThis);
 
-boolean USBMouseDeviceConfigure (TUSBDevice *pUSBDevice);
+boolean USBMouseDeviceConfigure (TUSBFunction *pUSBFunction);
 
 void USBMouseDeviceRegisterStatusHandler (TUSBMouseDevice *pThis, TMouseStatusHandler *pStatusHandler);
 

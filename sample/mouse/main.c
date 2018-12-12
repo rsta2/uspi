@@ -8,9 +8,13 @@
 
 static const char FromSample[] = "sample";
 
-static void KeyPressedHandler (const char *pString)
+static void MouseStatusHandler (unsigned nButtons, int nDisplacementX, int nDisplacementY)
 {
-	ScreenDeviceWrite (USPiEnvGetScreen (), pString, strlen (pString));
+	LogWrite (FromSample, LOG_NOTICE, "Buttons %c%c%c, X %d, Y %d",
+		  nButtons & MOUSE_BUTTON1 ? 'L' : '-',
+		  nButtons & MOUSE_BUTTON3 ? 'M' : '-',
+		  nButtons & MOUSE_BUTTON2 ? 'R' : '-',
+		  nDisplacementX, nDisplacementY);
 }
 
 int main (void)
@@ -29,24 +33,22 @@ int main (void)
 		return EXIT_HALT;
 	}
 	
-	if (!USPiKeyboardAvailable ())
+	if (!USPiMouseAvailable ())
 	{
-		LogWrite (FromSample, LOG_ERROR, "Keyboard not found");
+		LogWrite (FromSample, LOG_ERROR, "Mouse not found");
 
 		USPiEnvClose ();
 
 		return EXIT_HALT;
 	}
 
-	USPiKeyboardRegisterKeyPressedHandler (KeyPressedHandler);
+	USPiMouseRegisterStatusHandler (MouseStatusHandler);
 
-	LogWrite (FromSample, LOG_NOTICE, "Just type something!");
+	LogWrite (FromSample, LOG_NOTICE, "Move your mouse!");
 
 	// just wait and turn the rotor
 	for (unsigned nCount = 0; 1; nCount++)
 	{
-		USPiKeyboardUpdateLEDs ();
-
 		ScreenDeviceRotor (USPiEnvGetScreen (), 0, nCount);
 	}
 

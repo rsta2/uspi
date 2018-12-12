@@ -2,7 +2,7 @@
 // usbgamepad.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // Copyright (C) 2014  M. Maccaferri <macca@maccasoft.com>
 //
 // This program is free software: you can redistribute it and/or modify
@@ -81,17 +81,16 @@ static boolean USBGamePadDeviceStartRequest (TUSBGamePadDevice *pThis);
 static void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext);
 static void USBGamePadDevicePS3Configure (TUSBGamePadDevice *pThis);
 
-void USBGamePadDevice (TUSBGamePadDevice *pThis, TUSBDevice *pDevice)
+void USBGamePadDevice (TUSBGamePadDevice *pThis, TUSBFunction *pDevice)
 {
 	assert (pThis != 0);
 
-	USBDeviceCopy (&pThis->m_USBDevice, pDevice);
-	pThis->m_USBDevice.Configure = USBGamePadDeviceConfigure;
+	USBFunctionCopy (&pThis->m_USBFunction, pDevice);
+	pThis->m_USBFunction.Configure = USBGamePadDeviceConfigure;
 
 	pThis->m_pEndpointIn = 0;
     pThis->m_pEndpointOut = 0;
     pThis->m_pStatusHandler = 0;
-	pThis->m_pURB = 0;
 	pThis->m_pHIDReportDescriptor = 0;
 	pThis->m_usReportDescriptorLength = 0;
     pThis->m_nReportSize = 0;
@@ -144,7 +143,7 @@ void _CUSBGamePadDevice (TUSBGamePadDevice *pThis)
         pThis->m_pEndpointOut = 0;
     }
 
-	_USBDevice (&pThis->m_USBDevice);
+	_USBFunction (&pThis->m_USBFunction);
 }
 
 static u32 BitGetUnsigned(void *buffer, u32 offset, u32 length)
@@ -334,48 +333,29 @@ static void USBGamePadDeviceDecodeReport(TUSBGamePadDevice *pThis)
     pThis->m_nReportSize = (offset + 7) / 8;
 }
 
-boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
+boolean USBGamePadDeviceConfigure (TUSBFunction *pUSBFunction)
 {
-	TUSBGamePadDevice *pThis = (TUSBGamePadDevice *) pUSBDevice;
+	TUSBGamePadDevice *pThis = (TUSBGamePadDevice *) pUSBFunction;
 	assert (pThis != 0);
 
-	TUSBConfigurationDescriptor *pConfDesc =
-		(TUSBConfigurationDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_CONFIGURATION);
-	if (   pConfDesc == 0
-	    || pConfDesc->bNumInterfaces <  1)
+	if (USBFunctionGetNumEndpoints (&pThis->m_USBFunction) <  1)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromUSBPad);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBPad);
 
 		return FALSE;
 	}
 
-    TUSBInterfaceDescriptor *pInterfaceDesc =
-        (TUSBInterfaceDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_INTERFACE);
-    if (   pInterfaceDesc == 0
-        || pInterfaceDesc->bNumEndpoints      <  1
-        || pInterfaceDesc->bInterfaceClass    != 0x03   // HID Class
-        || pInterfaceDesc->bInterfaceSubClass != 0x00   // Boot Interface Subclass
-        || pInterfaceDesc->bInterfaceProtocol != 0x00)  // GamePad
-    {
-        USBDeviceConfigurationError (&pThis->m_USBDevice, FromUSBPad);
-
-        return FALSE;
-    }
-
-    pThis->m_ucInterfaceNumber  = pInterfaceDesc->bInterfaceNumber;
-    pThis->m_ucAlternateSetting = pInterfaceDesc->bAlternateSetting;
-
-    TUSBHIDDescriptor *pHIDDesc = (TUSBHIDDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_HID);
+    TUSBHIDDescriptor *pHIDDesc = (TUSBHIDDescriptor *) USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_HID);
     if (   pHIDDesc == 0
         || pHIDDesc->wReportDescriptorLength == 0)
     {
-        USBDeviceConfigurationError (&pThis->m_USBDevice, FromUSBPad);
+        USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBPad);
 
         return FALSE;
     }
 
     const TUSBEndpointDescriptor *pEndpointDesc;
-    while ((pEndpointDesc = (TUSBEndpointDescriptor *) USBDeviceGetDescriptor (&pThis->m_USBDevice, DESCRIPTOR_ENDPOINT)) != 0)
+    while ((pEndpointDesc = (TUSBEndpointDescriptor *) USBFunctionGetDescriptor (&pThis->m_USBFunction, DESCRIPTOR_ENDPOINT)) != 0)
     {
         if ((pEndpointDesc->bmAttributes & 0x3F) == 0x03)       // Interrupt
         {
@@ -383,34 +363,34 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
             {
                 if (pThis->m_pEndpointIn != 0)
                 {
-                    USBDeviceConfigurationError (&pThis->m_USBDevice, FromUSBPad);
+                    USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBPad);
 
                     return FALSE;
                 }
 
                 pThis->m_pEndpointIn = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
                 assert (pThis->m_pEndpointIn != 0);
-                USBEndpoint2 (pThis->m_pEndpointIn, &pThis->m_USBDevice, pEndpointDesc);
+                USBEndpoint2 (pThis->m_pEndpointIn, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
             }
             else                            // Output
             {
                 if (pThis->m_pEndpointOut != 0)
                 {
-                    USBDeviceConfigurationError (&pThis->m_USBDevice, FromUSBPad);
+                    USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBPad);
 
                     return FALSE;
                 }
 
                 pThis->m_pEndpointOut = (TUSBEndpoint *) malloc (sizeof (TUSBEndpoint));
                 assert (pThis->m_pEndpointOut != 0);
-                USBEndpoint2 (pThis->m_pEndpointOut, &pThis->m_USBDevice, pEndpointDesc);
+                USBEndpoint2 (pThis->m_pEndpointOut, USBFunctionGetDevice (&pThis->m_USBFunction), pEndpointDesc);
             }
         }
     }
 
 	if (pThis->m_pEndpointIn == 0)
 	{
-		USBDeviceConfigurationError (&pThis->m_USBDevice, FromUSBPad);
+		USBFunctionConfigurationError (&pThis->m_USBFunction, FromUSBPad);
 
 		return FALSE;
 	}
@@ -419,11 +399,11 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
     pThis->m_pHIDReportDescriptor = (unsigned char *) malloc(pHIDDesc->wReportDescriptorLength);
     assert (pThis->m_pHIDReportDescriptor != 0);
 
-    if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-                    USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+    if (DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+                    USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
                     REQUEST_IN | REQUEST_TO_INTERFACE, GET_DESCRIPTOR,
                     (pHIDDesc->bReportDescriptorType << 8) | DESCRIPTOR_INDEX_DEFAULT,
-                    pThis->m_ucInterfaceNumber,
+                    USBFunctionGetInterfaceNumber (&pThis->m_USBFunction),
                     pThis->m_pHIDReportDescriptor, pHIDDesc->wReportDescriptorLength)
         != pHIDDesc->wReportDescriptorLength)
     {
@@ -436,31 +416,25 @@ boolean USBGamePadDeviceConfigure (TUSBDevice *pUSBDevice)
     pThis->m_pReportBuffer[0] = 0;
     USBGamePadDeviceDecodeReport (pThis);
 
-    if (!USBDeviceConfigure (&pThis->m_USBDevice))
+	// ignoring unsupported HID interface
+	if (   pThis->m_State.naxes    == 0
+	    && pThis->m_State.nhats    == 0
+	    && pThis->m_State.nbuttons == 0)
+	{
+		return FALSE;
+	}
+
+    if (!USBFunctionConfigure (&pThis->m_USBFunction))
     {
-        LogWrite (FromUSBPad, LOG_ERROR, "Cannot set configuration");
+        LogWrite (FromUSBPad, LOG_ERROR, "Cannot set interface");
 
         return FALSE;
     }
 
-    if (pThis->m_ucAlternateSetting != 0)
-    {
-        if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-                        USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
-                        REQUEST_OUT | REQUEST_TO_INTERFACE, SET_INTERFACE,
-                        pThis->m_ucAlternateSetting,
-                        pThis->m_ucInterfaceNumber, 0, 0) < 0)
-        {
-            LogWrite (FromUSBPad, LOG_ERROR, "Cannot set interface");
-
-            return FALSE;
-        }
-    }
-
     pThis->m_nDeviceIndex = s_nDeviceNumber++;
 
-    if (   pUSBDevice->m_pDeviceDesc->idVendor == 0x054c
-        && pUSBDevice->m_pDeviceDesc->idProduct == 0x0268)
+    if (   USBFunctionGetDevice (pUSBFunction)->m_pDeviceDesc->idVendor == 0x054c
+        && USBFunctionGetDevice (pUSBFunction)->m_pDeviceDesc->idProduct == 0x0268)
     {
         USBGamePadDevicePS3Configure (pThis);
     }
@@ -489,13 +463,10 @@ boolean USBGamePadDeviceStartRequest (TUSBGamePadDevice *pThis)
 	assert (pThis->m_pEndpointIn != 0);
 	assert (pThis->m_pReportBuffer != 0);
 
-	assert (pThis->m_pURB == 0);
-	pThis->m_pURB = malloc (sizeof (TUSBRequest));
-	assert (pThis->m_pURB != 0);
-	USBRequest (pThis->m_pURB, pThis->m_pEndpointIn, pThis->m_pReportBuffer, pThis->m_nReportSize, 0);
-	USBRequestSetCompletionRoutine (pThis->m_pURB, USBGamePadDeviceCompletionRoutine, 0, pThis);
+	USBRequest (&pThis->m_URB, pThis->m_pEndpointIn, pThis->m_pReportBuffer, pThis->m_nReportSize, 0);
+	USBRequestSetCompletionRoutine (&pThis->m_URB, USBGamePadDeviceCompletionRoutine, 0, pThis);
 
-	return DWHCIDeviceSubmitAsyncRequest (USBDeviceGetHost (&pThis->m_USBDevice), pThis->m_pURB);
+	return DWHCIDeviceSubmitAsyncRequest (USBFunctionGetHost (&pThis->m_USBFunction), &pThis->m_URB);
 }
 
 void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *pContext)
@@ -504,7 +475,7 @@ void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *p
 	assert (pThis != 0);
 
 	assert (pURB != 0);
-	assert (pThis->m_pURB == pURB);
+	assert (&pThis->m_URB == pURB);
 
 	if (   USBRequestGetStatus (pURB) != 0
 	    && USBRequestGetResultLength (pURB) > 0)
@@ -517,20 +488,18 @@ void USBGamePadDeviceCompletionRoutine (TUSBRequest *pURB, void *pParam, void *p
         }
 	}
 
-	_USBRequest (pThis->m_pURB);
-	free (pThis->m_pURB);
-	pThis->m_pURB = 0;
+	_USBRequest (&pThis->m_URB);
 
 	USBGamePadDeviceStartRequest (pThis);
 }
 
 void USBGamePadDeviceGetReport (TUSBGamePadDevice *pThis)
 {
-    if (DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-                       USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+    if (DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+                       USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
                        REQUEST_IN | REQUEST_CLASS | REQUEST_TO_INTERFACE,
                        GET_REPORT, (REPORT_TYPE_INPUT << 8) | 0x00,
-                       pThis->m_ucInterfaceNumber,
+                       USBFunctionGetInterfaceNumber (&pThis->m_USBFunction),
                        pThis->m_pReportBuffer, pThis->m_nReportSize) > 0)
     {
         USBGamePadDeviceDecodeReport (pThis);
@@ -567,19 +536,19 @@ void USBGamePadDevicePS3Configure (TUSBGamePadDevice *pThis)
     pThis->m_pReportBuffer[1] = 0x0c;
     pThis->m_pReportBuffer[2] = 0x00;
     pThis->m_pReportBuffer[3] = 0x00;
-    DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-                           USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+    DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+                           USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
                            REQUEST_OUT | REQUEST_CLASS | REQUEST_TO_INTERFACE,
                            SET_REPORT, (REPORT_TYPE_FEATURE << 8) | 0xf4,
-                           pThis->m_ucInterfaceNumber,
+                           USBFunctionGetInterfaceNumber (&pThis->m_USBFunction),
                            pThis->m_pReportBuffer, 4);
 
     /* Turn on LED */
     writeBuf[9] |= (u8)(leds[pThis->m_nDeviceIndex] << 1);
-    DWHCIDeviceControlMessage (USBDeviceGetHost (&pThis->m_USBDevice),
-                           USBDeviceGetEndpoint0 (&pThis->m_USBDevice),
+    DWHCIDeviceControlMessage (USBFunctionGetHost (&pThis->m_USBFunction),
+                           USBFunctionGetEndpoint0 (&pThis->m_USBFunction),
                            REQUEST_OUT | REQUEST_CLASS | REQUEST_TO_INTERFACE,
                            SET_REPORT, (REPORT_TYPE_OUTPUT << 8) | 0x01,
-                           pThis->m_ucInterfaceNumber,
+                           USBFunctionGetInterfaceNumber (&pThis->m_USBFunction),
                            writeBuf, 48);
 }

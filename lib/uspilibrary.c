@@ -20,7 +20,7 @@
 #include <uspi/uspilibrary.h>
 #include <uspi.h>
 #include <uspios.h>
-#include <uspi/usbdevice.h>
+#include <uspi/usbfunction.h>
 #include <uspi/string.h>
 #include <uspi/util.h>
 #include <uspi/assert.h>
@@ -31,6 +31,8 @@ static TUSPiLibrary *s_pLibrary = 0;
 
 int USPiInitialize (void)
 {
+	LogWrite (FromUSPi, LOG_DEBUG, "Initializing " USPI_NAME " " USPI_VERSION_STRING);
+
 	assert (s_pLibrary == 0);
 	s_pLibrary = (TUSPiLibrary *) malloc (sizeof (TUSPiLibrary));
 	assert (s_pLibrary != 0);
@@ -86,7 +88,7 @@ int USPiInitialize (void)
 		_String  (&DeviceName);
 	}
 
-	LogWrite (FromUSPi, LOG_DEBUG, "USPi library successfully initialized");
+	LogWrite (FromUSPi, LOG_DEBUG, USPI_NAME " successfully initialized");
 
 	return 1;
 }
@@ -111,11 +113,25 @@ void USPiKeyboardRegisterShutdownHandler (TUSPiShutdownHandler *pShutdownHandler
 	USBKeyboardDeviceRegisterShutdownHandler (s_pLibrary->pUKBD1, pShutdownHandler);
 }
 
+void USPiKeyboardUpdateLEDs (void)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUKBD1 != 0);
+	USBKeyboardDeviceUpdateLEDs (s_pLibrary->pUKBD1);
+}
+
 void USPiKeyboardRegisterKeyStatusHandlerRaw (TKeyStatusHandlerRaw *pKeyStatusHandlerRaw)
 {
 	assert (s_pLibrary != 0);
 	assert (s_pLibrary->pUKBD1 != 0);
 	USBKeyboardDeviceRegisterKeyStatusHandlerRaw (s_pLibrary->pUKBD1, pKeyStatusHandlerRaw);
+}
+
+void USPiKeyboardSetLEDs (unsigned char ucLEDMask)
+{
+	assert (s_pLibrary != 0);
+	assert (s_pLibrary->pUKBD1 != 0);
+	USBKeyboardDeviceSetLEDs (s_pLibrary->pUKBD1, ucLEDMask);
 }
 
 int USPiMouseAvailable (void)
@@ -221,6 +237,19 @@ void USPiGetMACAddress (unsigned char Buffer[6])
 	MACAddressCopyTo (pMACAddress, Buffer);
 }
 
+int USPiEthernetIsLinkUp (void)
+{
+	assert (s_pLibrary != 0);
+
+	if (s_pLibrary->pEth10 != 0)
+	{
+		return LAN7800DeviceIsLinkUp (s_pLibrary->pEth10) ? 1 : 0;
+	}
+
+	assert (s_pLibrary->pEth0 != 0);
+	return SMSC951xDeviceIsLinkUp (s_pLibrary->pEth0) ? 1 : 0;
+}
+
 int USPiSendFrame (const void *pBuffer, unsigned nLength)
 {
 	assert (s_pLibrary != 0);
@@ -309,28 +338,28 @@ int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDevic
 {
 	assert (s_pLibrary != 0);
 
-	TUSBDevice *pUSBDevice = 0;
+	TUSBFunction *pUSBFunction = 0;
 
 	switch (nClass)
 	{
 	case KEYBOARD_CLASS:
 		if (nDeviceIndex == 0)
 		{
-			pUSBDevice = (TUSBDevice *) s_pLibrary->pUKBD1;
+			pUSBFunction = (TUSBFunction *) s_pLibrary->pUKBD1;
 		}
 		break;
 
 	case MOUSE_CLASS:
 		if (nDeviceIndex == 0)
 		{
-			pUSBDevice = (TUSBDevice *) s_pLibrary->pUMouse1;
+			pUSBFunction = (TUSBFunction *) s_pLibrary->pUMouse1;
 		}
 		break;
 
 	case STORAGE_CLASS:
 		if (nDeviceIndex < MAX_DEVICES)
 		{
-			pUSBDevice = (TUSBDevice *) s_pLibrary->pUMSD[nDeviceIndex];
+			pUSBFunction = (TUSBFunction *) s_pLibrary->pUMSD[nDeviceIndex];
 		}
 		break;
 
@@ -339,11 +368,11 @@ int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDevic
 		{
 			if (s_pLibrary->pEth10 != 0)
 			{
-				pUSBDevice = (TUSBDevice *) s_pLibrary->pEth10;
+				pUSBFunction = (TUSBFunction *) s_pLibrary->pEth10;
 			}
 			else
 			{
-				pUSBDevice = (TUSBDevice *) s_pLibrary->pEth0;
+				pUSBFunction = (TUSBFunction *) s_pLibrary->pEth0;
 			}
 		}
 		break;
@@ -351,14 +380,14 @@ int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDevic
 	case GAMEPAD_CLASS:
 		if (nDeviceIndex < MAX_DEVICES)
 		{
-			pUSBDevice = (TUSBDevice *) s_pLibrary->pUPAD[nDeviceIndex];
+			pUSBFunction = (TUSBFunction *) s_pLibrary->pUPAD[nDeviceIndex];
 		}
 		break;
 
 	case MIDI_CLASS:
 		if (nDeviceIndex == 0)
 		{
-			pUSBDevice = (TUSBDevice *) s_pLibrary->pMIDI1;
+			pUSBFunction = (TUSBFunction *) s_pLibrary->pMIDI1;
 		}
 		break;
 
@@ -366,10 +395,13 @@ int USPiDeviceGetInformation (unsigned nClass, unsigned nDeviceIndex, TUSPiDevic
 		break;
 	}
 
-	if (pUSBDevice == 0)
+	if (pUSBFunction == 0)
 	{
 		return 0;
 	}
+
+	TUSBDevice *pUSBDevice = USBFunctionGetDevice (pUSBFunction);
+	assert (pUSBDevice != 0);
 
 	const TUSBDeviceDescriptor *pDesc = USBDeviceGetDeviceDescriptor (pUSBDevice);
 	assert (pDesc != 0);

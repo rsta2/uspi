@@ -2,7 +2,7 @@
 // pagetable.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 #ifndef _uspienv_pagetable_h
 #define _uspienv_pagetable_h
 
-#include <uspienv/armv6mmu.h>
 #include <uspienv/types.h>
 
 #ifdef __cplusplus
@@ -29,17 +28,11 @@ extern "C" {
 
 typedef struct TPageTable
 {
-	boolean m_bTableAllocated;
-	TARMV6MMU_LEVEL1_SECTION_DESCRIPTOR *m_pTable;
+	u32 *m_pTable;
 }
 TPageTable;
 
-// 4GB shared device
-void PageTable (TPageTable *pThis);
-
-// 0..nMemSize: normal,
-// nMemSize..512MB: shared device (1024MB on Raspberry Pi 2)
-void PageTable2 (TPageTable *pThis, u32 nMemSize);
+void PageTable (TPageTable *pThis, u32 nMemSize);
 
 void _PageTable (TPageTable *pThis);
 

@@ -2,7 +2,7 @@
 // memory.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014-2015  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -31,16 +31,14 @@
 			 | ARM_CONTROL_L1_INSTRUCTION_CACHE	\
 			 | ARM_CONTROL_BRANCH_PREDICTION	\
 			 | ARM_CONTROL_EXTENDED_PAGE_TABLE)
-
-#define TTBCR_SPLIT	3
 #else
 #define MMU_MODE	(  ARM_CONTROL_MMU			\
 			 | ARM_CONTROL_L1_CACHE			\
 			 | ARM_CONTROL_L1_INSTRUCTION_CACHE	\
 			 | ARM_CONTROL_BRANCH_PREDICTION)
-
-#define TTBCR_SPLIT	2
 #endif
+
+#define TTBCR_SPLIT	0
 
 void MemorySystemEnableMMU (TMemorySystem *pThis);
 
@@ -50,8 +48,7 @@ void MemorySystem (TMemorySystem *pThis, boolean bEnableMMU)
 
 	pThis->m_bEnableMMU = bEnableMMU;
 	pThis->m_nMemSize = 0;
-	pThis->m_pPageTable0Default = 0;
-	pThis->m_pPageTable1 = 0;
+	pThis->m_pPageTable = 0;
 
 	TBcmPropertyTags Tags;
 	BcmPropertyTags (&Tags);
@@ -69,13 +66,9 @@ void MemorySystem (TMemorySystem *pThis, boolean bEnableMMU)
 
 	if (pThis->m_bEnableMMU)
 	{
-		pThis->m_pPageTable0Default = (TPageTable *) malloc (sizeof (TPageTable));
-		assert (pThis->m_pPageTable0Default != 0);
-		PageTable2 (pThis->m_pPageTable0Default, pThis->m_nMemSize);
-
-		pThis->m_pPageTable1 = (TPageTable *) malloc (sizeof (TPageTable));
-		assert (pThis->m_pPageTable1 != 0);
-		PageTable (pThis->m_pPageTable1);
+		pThis->m_pPageTable = (TPageTable *) malloc (sizeof (TPageTable));
+		assert (pThis->m_pPageTable != 0);
+		PageTable (pThis->m_pPageTable, pThis->m_nMemSize);
 
 		MemorySystemEnableMMU (pThis);
 	}
@@ -99,13 +92,9 @@ void _MemorySystem (TMemorySystem *pThis)
 		asm volatile ("mcr p15, 0, %0, c8, c7,  0" : : "r" (0) : "memory");
 	}
 	
-	_PageTable (pThis->m_pPageTable1);
-	free (pThis->m_pPageTable1);
-	pThis->m_pPageTable1 = 0;
-	
-	_PageTable (pThis->m_pPageTable0Default);
-	free (pThis->m_pPageTable0Default);
-	pThis->m_pPageTable0Default = 0;
+	_PageTable (pThis->m_pPageTable);
+	free (pThis->m_pPageTable);
+	pThis->m_pPageTable = 0;
 }
 
 u32 MemorySystemGetMemSize (TMemorySystem *pThis)
@@ -138,16 +127,11 @@ void MemorySystemEnableMMU (TMemorySystem *pThis)
 	asm volatile ("mcr p15, 0, %0, c2, c0,  2" : : "r" (TTBCR_SPLIT));
 
 	// set TTBR0
-	assert (pThis->m_pPageTable0Default != 0);
-	asm volatile ("mcr p15, 0, %0, c2, c0,  0" : : "r" (PageTableGetBaseAddress (pThis->m_pPageTable0Default)));
+	assert (pThis->m_pPageTable != 0);
+	asm volatile ("mcr p15, 0, %0, c2, c0,  0" : : "r" (PageTableGetBaseAddress (pThis->m_pPageTable)));
 
-	// set TTBR1
-	assert (pThis->m_pPageTable1 != 0);
-	asm volatile ("mcr p15, 0, %0, c2, c0,  1" : : "r" (PageTableGetBaseAddress (pThis->m_pPageTable1)));
-	
 	// set Domain Access Control register (Domain 0 and 1 to client)
-	asm volatile ("mcr p15, 0, %0, c3, c0,  0" : : "r" (  DOMAIN_CLIENT << 0
-							    | DOMAIN_CLIENT << 2));
+	asm volatile ("mcr p15, 0, %0, c3, c0,  0" : : "r" (DOMAIN_CLIENT << 0));
 
 	InvalidateDataCache ();
 	FlushPrefetchBuffer ();

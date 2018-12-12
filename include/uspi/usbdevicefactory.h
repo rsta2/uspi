@@ -2,7 +2,7 @@
 // usbdevicefactory.h
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -20,9 +20,9 @@
 #ifndef _uspi_usbdevicefactory_h
 #define _uspi_usbdevicefactory_h
 
-#include <uspi/usbdevice.h>
+#include <uspi/usbfunction.h>
 #include <uspi/string.h>
 
-TUSBDevice *USBDeviceFactoryGetDevice (TUSBDevice *pParent);
+TUSBFunction *USBDeviceFactoryGetDevice (TUSBFunction *pParent, TString *pName);
 
 #endif

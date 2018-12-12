@@ -4,7 +4,7 @@
 // Services provided by the USPi library
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -25,6 +25,16 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+//
+// Version information
+//
+
+#define USPI_NAME			"USPi library"
+
+#define USPI_MAJOR_VERSION		2
+#define USPI_MINOR_VERSION		0
+#define USPI_VERSION_STRING		"2.00"
 
 //
 // USPi initialization
@@ -48,6 +58,9 @@ void USPiKeyboardRegisterKeyPressedHandler (TUSPiKeyPressedHandler *pKeyPressedH
 typedef void TUSPiShutdownHandler (void);
 void USPiKeyboardRegisterShutdownHandler (TUSPiShutdownHandler *pShutdownHandler);
 
+// Call this frequently from your application main loop to allow updating the keyboard LEDs.
+void USPiKeyboardUpdateLEDs (void);
+
 // "raw mode" (if this handler is registered the others are ignored)
 // The raw handler is called when the keyboard sends a status report (on status change and/or continously).
 typedef void TUSPiKeyStatusHandlerRaw (unsigned char	     ucModifiers,
@@ -63,6 +76,12 @@ void USPiKeyboardRegisterKeyStatusHandlerRaw (TUSPiKeyStatusHandlerRaw *pKeyStat
 #define RSHIFT		(1 << 5)
 #define ALTGR		(1 << 6)
 #define RWIN		(1 << 7)
+
+// Set the keyboard LEDs in "raw mode"
+void USPiKeyboardSetLEDs (unsigned char ucLEDMask);
+#define LED_NUM_LOCK	(1 << 0)
+#define LED_CAPS_LOCK	(1 << 1)
+#define LED_SCROLL_LOCK	(1 << 2)
 
 //
 // Mouse device
@@ -81,16 +100,6 @@ void USPiMouseRegisterStatusHandler (TUSPiMouseStatusHandler *pStatusHandler);
 #define MOUSE_BUTTON1	(1 << 0)
 #define MOUSE_BUTTON2	(1 << 1)
 #define MOUSE_BUTTON3	(1 << 2)
-
-// ucModifiers (bit is set if modifier key is pressed)
-#define LCTRL		(1 << 0)
-#define LSHIFT		(1 << 1)
-#define ALT		(1 << 2)
-#define LWIN		(1 << 3)
-#define RCTRL		(1 << 4)
-#define RSHIFT		(1 << 5)
-#define ALTGR		(1 << 6)
-#define RWIN		(1 << 7)
 
 //
 // Mass storage device
@@ -125,6 +134,9 @@ unsigned USPiMassStorageDeviceGetCapacity (unsigned nDeviceIndex);
 int USPiEthernetAvailable (void);
 
 void USPiGetMACAddress (unsigned char Buffer[6]);
+
+// returns != 0 if link is up
+int USPiEthernetIsLinkUp (void);
 
 // returns 0 on failure
 int USPiSendFrame (const void *pBuffer, unsigned nLength);

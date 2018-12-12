@@ -2,7 +2,7 @@
 // dwhcirootport.cpp
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2018  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -67,7 +67,7 @@ boolean DWHCIRootPortInitialize (TDWHCIRootPort *pThis)
 	assert (pThis->m_pDevice == 0);
 	pThis->m_pDevice = (TUSBDevice *) malloc (sizeof (TUSBDevice));
 	assert (pThis->m_pDevice != 0);
-	USBDevice (pThis->m_pDevice, pThis->m_pHost, Speed, 0, 1);
+	USBDevice (pThis->m_pDevice, pThis->m_pHost, Speed, FALSE, 0, 1);
 
 	if (!USBDeviceInitialize (pThis->m_pDevice))
 	{
@@ -78,45 +78,18 @@ boolean DWHCIRootPortInitialize (TDWHCIRootPort *pThis)
 		return FALSE;
 	}
 
-	TString *pNames = USBStandardHubGetDeviceNames (pThis->m_pDevice);
-	assert (pNames != 0);
-
-	LogWrite (FromDWHCIRoot, LOG_NOTICE, "Device %s found", StringGet (pNames));
-
-	_String (pNames);
-	free (pNames);
-
-	// now create specific device from default device
-	TUSBDevice *pChild = USBDeviceFactoryGetDevice (pThis->m_pDevice);
-	if (pChild != 0)
+	if (!USBDeviceConfigure (pThis->m_pDevice))
 	{
-		_USBDevice (pThis->m_pDevice);		// delete default device
-		free (pThis->m_pDevice);
-		pThis->m_pDevice = pChild;		// assign specific device
+		LogWrite (FromDWHCIRoot, LOG_ERROR, "Cannot configure device");
 
-		if (!(*pThis->m_pDevice->Configure) (pThis->m_pDevice))
-		{
-			LogWrite (FromDWHCIRoot, LOG_ERROR, "Cannot configure device");
-
-			_USBDevice (pThis->m_pDevice);
-			free (pThis->m_pDevice);
-			pThis->m_pDevice = 0;
-
-			return FALSE;
-		}
-		
-		LogWrite (FromDWHCIRoot, LOG_DEBUG, "Device configured");
-	}
-	else
-	{
-		LogWrite (FromDWHCIRoot, LOG_NOTICE, "Device is not supported");
-		
 		_USBDevice (pThis->m_pDevice);
 		free (pThis->m_pDevice);
 		pThis->m_pDevice = 0;
 
 		return FALSE;
 	}
+
+	LogWrite (FromDWHCIRoot, LOG_DEBUG, "Device configured");
 
 	// check for over-current
 	if (DWHCIDeviceOvercurrentDetected (pThis->m_pHost))

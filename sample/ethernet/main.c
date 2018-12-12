@@ -79,6 +79,20 @@ int main (void)
 	u8 OwnMACAddress[MAC_ADDRESS_SIZE];
 	USPiGetMACAddress (OwnMACAddress);
 
+	unsigned nTimeout = 0;
+	while (!USPiEthernetIsLinkUp ())
+	{
+		MsDelay (100);
+
+		if (++nTimeout < 40)
+		{
+			continue;
+		}
+		nTimeout = 0;
+
+		LogWrite (FromSample, LOG_NOTICE, "Link is down");
+	}
+
 	while (1)
 	{
 		u8 Buffer[USPI_FRAME_BUFFER_SIZE];

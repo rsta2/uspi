@@ -30,7 +30,8 @@ void USBConfigurationParser (TUSBConfigurationParser *pThis, const void *pBuffer
 	pThis->m_nBufLen = nBufLen;
 	pThis->m_bValid = FALSE;
 	pThis->m_pEndPosition = SKIP_BYTES (pThis->m_pBuffer, nBufLen);
-	pThis->m_pCurrentPosition = pThis->m_pBuffer;
+	pThis->m_pNextPosition = pThis->m_pBuffer;
+	pThis->m_pCurrentDescriptor = 0;
 	pThis->m_pErrorPosition = pThis->m_pBuffer;
 
 	assert (pThis->m_pBuffer != 0);
@@ -124,6 +125,20 @@ void USBConfigurationParser (TUSBConfigurationParser *pThis, const void *pBuffer
 	pThis->m_bValid = TRUE;
 }
 
+void USBConfigurationParserCopy (TUSBConfigurationParser *pThis, TUSBConfigurationParser *pParser)
+{
+	assert (pThis != 0);
+	assert (pParser != 0);
+
+	pThis->m_pBuffer	    = pParser->m_pBuffer;
+	pThis->m_nBufLen	    = pParser->m_nBufLen;
+	pThis->m_bValid	     	    = pParser->m_bValid;
+	pThis->m_pEndPosition	    = pParser->m_pEndPosition;
+	pThis->m_pNextPosition	    = pParser->m_pNextPosition;
+	pThis->m_pCurrentDescriptor = pParser->m_pCurrentDescriptor;
+	pThis->m_pErrorPosition     = pParser->m_pErrorPosition;
+}
+
 void _USBConfigurationParser (TUSBConfigurationParser *pThis)
 {
 	assert (pThis != 0);
@@ -143,12 +158,12 @@ const TUSBDescriptor *USBConfigurationParserGetDescriptor (TUSBConfigurationPars
 
 	const TUSBDescriptor *pResult = 0;
 	
-	while (pThis->m_pCurrentPosition < pThis->m_pEndPosition)
+	while (pThis->m_pNextPosition < pThis->m_pEndPosition)
 	{
-		u8 ucDescLen  = pThis->m_pCurrentPosition->Header.bLength;
-		u8 ucDescType = pThis->m_pCurrentPosition->Header.bDescriptorType;
+		u8 ucDescLen  = pThis->m_pNextPosition->Header.bLength;
+		u8 ucDescType = pThis->m_pNextPosition->Header.bDescriptorType;
 
-		TUSBDescriptor *pDescEnd = SKIP_BYTES (pThis->m_pCurrentPosition, ucDescLen);
+		TUSBDescriptor *pDescEnd = SKIP_BYTES (pThis->m_pNextPosition, ucDescLen);
 		assert (pDescEnd <= pThis->m_pEndPosition);
 
 		if (   ucType     == DESCRIPTOR_ENDPOINT
@@ -159,12 +174,12 @@ const TUSBDescriptor *USBConfigurationParserGetDescriptor (TUSBConfigurationPars
 
 		if (ucDescType == ucType)
 		{
-			pResult = pThis->m_pCurrentPosition;
-			pThis->m_pCurrentPosition = pDescEnd;
+			pResult = pThis->m_pNextPosition;
+			pThis->m_pNextPosition = pDescEnd;
 			break;
 		}
 
-		pThis->m_pCurrentPosition = pDescEnd;
+		pThis->m_pNextPosition = pDescEnd;
 	}
 
 	if (pResult != 0)
@@ -172,9 +187,18 @@ const TUSBDescriptor *USBConfigurationParserGetDescriptor (TUSBConfigurationPars
 		pThis->m_pErrorPosition = pResult;
 	}
 
+	pThis->m_pCurrentDescriptor = pResult;
+
 	return pResult;
 }
 
+const TUSBDescriptor *USBConfigurationParserGetCurrentDescriptor (TUSBConfigurationParser *pThis)
+{
+	assert (pThis->m_bValid);
+	assert (pThis->m_pCurrentDescriptor != 0);
+
+	return pThis->m_pCurrentDescriptor;
+}
 
 void USBConfigurationParserError (TUSBConfigurationParser *pThis, const char *pSource)
 {

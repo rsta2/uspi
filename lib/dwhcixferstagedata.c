@@ -18,9 +18,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 #include <uspi/dwhcixferstagedata.h>
-#include <uspi/dwhciframeschedper.h>
-#include <uspi/dwhciframeschednper.h>
-#include <uspi/dwhciframeschednsplit.h>
 #include <uspi/dwhci.h>
 #include <uspios.h>
 #include <uspi/assert.h>
@@ -38,8 +35,7 @@ void DWHCITransferStageData (TDWHCITransferStageData *pThis, unsigned nChannel, 
 	pThis->m_nState = 0;
 	pThis->m_nSubState = 0;
 	pThis->m_nTransactionStatus = 0;
-	pThis->m_pTempBuffer = 0;
-	pThis->m_pFrameScheduler = 0;
+	pThis->m_bFrameSchedulerUsed = FALSE;
 
 	assert (pThis->m_pURB != 0);
 
@@ -90,10 +86,7 @@ void DWHCITransferStageData (TDWHCITransferStageData *pThis, unsigned nChannel, 
 	}
 	else
 	{
-		assert (pThis->m_pTempBuffer == 0);
-		pThis->m_pTempBuffer = (u32 *) malloc (sizeof (u32));
-		assert (pThis->m_pTempBuffer != 0);
-		pThis->m_pBufferPointer = pThis->m_pTempBuffer;
+		pThis->m_pBufferPointer = &pThis->m_TempBuffer;
 
 		pThis->m_nTransferSize = 0;
 		pThis->m_nBytesPerTransaction = 0;
@@ -108,25 +101,24 @@ void DWHCITransferStageData (TDWHCITransferStageData *pThis, unsigned nChannel, 
 	{
 		if (DWHCITransferStageDataIsPeriodic (pThis))
 		{
-			pThis->m_pFrameScheduler = (TDWHCIFrameScheduler *) malloc (sizeof (TDWHCIFrameSchedulerPeriodic));
-			DWHCIFrameSchedulerPeriodic ((TDWHCIFrameSchedulerPeriodic *) pThis->m_pFrameScheduler);
+			DWHCIFrameSchedulerPeriodic (&pThis->m_FrameScheduler.Periodic);
 		}
 		else
 		{
-			pThis->m_pFrameScheduler = (TDWHCIFrameScheduler *) malloc (sizeof (TDWHCIFrameSchedulerNonPeriodic));
-			DWHCIFrameSchedulerNonPeriodic ((TDWHCIFrameSchedulerNonPeriodic *) pThis->m_pFrameScheduler);
+			DWHCIFrameSchedulerNonPeriodic (&pThis->m_FrameScheduler.NonPeriodic);
 		}
 
-		assert (pThis->m_pFrameScheduler != 0);
+		pThis->m_bFrameSchedulerUsed = TRUE;
 	}
 	else
 	{
 		if (   USBDeviceGetHubAddress (pThis->m_pDevice) == 0
 		    && pThis->m_Speed != USBSpeedHigh)
 		{
-			pThis->m_pFrameScheduler = (TDWHCIFrameScheduler *) malloc (sizeof (TDWHCIFrameSchedulerNoSplit));
-			DWHCIFrameSchedulerNoSplit ((TDWHCIFrameSchedulerNoSplit *) pThis->m_pFrameScheduler, DWHCITransferStageDataIsPeriodic (pThis));
-			assert (pThis->m_pFrameScheduler != 0);
+			DWHCIFrameSchedulerNoSplit (&pThis->m_FrameScheduler.NoSplit,
+						    DWHCITransferStageDataIsPeriodic (pThis));
+
+			pThis->m_bFrameSchedulerUsed = TRUE;
 		}
 	}
 }
@@ -135,20 +127,12 @@ void _DWHCITransferStageData (TDWHCITransferStageData *pThis)
 {
 	assert (pThis != 0);
 
-	if (pThis->m_pFrameScheduler != 0)
+	if (pThis->m_bFrameSchedulerUsed)
 	{
-		pThis->m_pFrameScheduler->_DWHCIFrameScheduler (pThis->m_pFrameScheduler);
-		free (pThis->m_pFrameScheduler);
-		pThis->m_pFrameScheduler = 0;
+		pThis->m_FrameScheduler.Base._DWHCIFrameScheduler (&pThis->m_FrameScheduler.Base);
 	}
 
 	pThis->m_pBufferPointer = 0;
-
-	if (pThis->m_pTempBuffer != 0)
-	{
-		free (pThis->m_pTempBuffer);
-		pThis->m_pTempBuffer = 0;
-	}
 
 	pThis->m_pEndpoint = 0;
 	pThis->m_pDevice = 0;
@@ -412,8 +396,7 @@ u8 DWHCITransferStageDataGetHubPortAddress (TDWHCITransferStageData *pThis)
 
 u8 DWHCITransferStageDataGetSplitPosition (TDWHCITransferStageData *pThis)
 {
-	assert (pThis != 0);
-	assert (pThis->m_nTransferSize <= 188);		// TODO
+	// only important for isochronous transfers
 	return DWHCI_HOST_CHAN_SPLIT_CTRL_ALL;
 }
 
@@ -469,5 +452,10 @@ TUSBRequest *DWHCITransferStageDataGetURB (TDWHCITransferStageData *pThis)
 TDWHCIFrameScheduler *DWHCITransferStageDataGetFrameScheduler (TDWHCITransferStageData *pThis)
 {
 	assert (pThis != 0);
-	return pThis->m_pFrameScheduler;
+	if (!pThis->m_bFrameSchedulerUsed)
+	{
+		return 0;
+	}
+
+	return &pThis->m_FrameScheduler.Base;
 }

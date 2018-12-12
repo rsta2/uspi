@@ -33,17 +33,21 @@ typedef struct TUSBConfigurationParser
 	unsigned		 m_nBufLen;
 	boolean			 m_bValid;
 	const TUSBDescriptor	*m_pEndPosition;
-	const TUSBDescriptor	*m_pCurrentPosition;
+	const TUSBDescriptor	*m_pNextPosition;
+	const TUSBDescriptor	*m_pCurrentDescriptor;
 	const TUSBDescriptor	*m_pErrorPosition;
 }
 TUSBConfigurationParser;
 
 void USBConfigurationParser (TUSBConfigurationParser *pThis, const void *pBuffer, unsigned nBufLen);
+void USBConfigurationParserCopy (TUSBConfigurationParser *pThis, TUSBConfigurationParser *pParser);
 void _USBConfigurationParser (TUSBConfigurationParser *pThis);
 
 boolean USBConfigurationParserIsValid (TUSBConfigurationParser *pThis);
 
 const TUSBDescriptor *USBConfigurationParserGetDescriptor (TUSBConfigurationParser *pThis, u8 ucType);	// returns 0 if not found
+
+const TUSBDescriptor *USBConfigurationParserGetCurrentDescriptor (TUSBConfigurationParser *pThis);
 
 void USBConfigurationParserError (TUSBConfigurationParser *pThis, const char *pSource);
 
