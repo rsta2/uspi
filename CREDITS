@@ -14,3 +14,6 @@ Spanish keymap (taken from Circle)
 Joshua Otto
 Providing support for framebuffers where pitch != width * bytes per pixel
 USB MIDI device class support
+
+Paolo Franchetti
+Suggesting improvements for the HID class device support and testing
