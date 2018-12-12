@@ -31,6 +31,8 @@ static TUSPiLibrary *s_pLibrary = 0;
 
 int USPiInitialize (void)
 {
+	LogWrite (FromUSPi, LOG_DEBUG, "Initializing " USPI_NAME " " USPI_VERSION_STRING);
+
 	assert (s_pLibrary == 0);
 	s_pLibrary = (TUSPiLibrary *) malloc (sizeof (TUSPiLibrary));
 	assert (s_pLibrary != 0);
@@ -86,7 +88,7 @@ int USPiInitialize (void)
 		_String  (&DeviceName);
 	}
 
-	LogWrite (FromUSPi, LOG_DEBUG, "USPi library successfully initialized");
+	LogWrite (FromUSPi, LOG_DEBUG, USPI_NAME " successfully initialized");
 
 	return 1;
 }

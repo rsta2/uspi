@@ -27,6 +27,16 @@ extern "C" {
 #endif
 
 //
+// Version information
+//
+
+#define USPI_NAME			"USPi library"
+
+#define USPI_MAJOR_VERSION		2
+#define USPI_MINOR_VERSION		0
+#define USPI_VERSION_STRING		"2.00"
+
+//
 // USPi initialization
 //
 
