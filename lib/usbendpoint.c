@@ -2,7 +2,7 @@
 // usbendpoint.c
 //
 // USPi - An USB driver for Raspberry Pi written in C
-// Copyright (C) 2014  R. Stange <rsta2@o2online.de>
+// Copyright (C) 2014-2020  R. Stange <rsta2@o2online.de>
 // 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -65,7 +65,10 @@ void USBEndpoint2 (TUSBEndpoint *pThis, TUSBDevice *pDevice, const TUSBEndpointD
 	
 	pThis->m_ucNumber       = pDesc->bEndpointAddress & 0x0F;
 	pThis->m_bDirectionIn   = pDesc->bEndpointAddress & 0x80 ? TRUE : FALSE;
-	pThis->m_nMaxPacketSize = pDesc->wMaxPacketSize;
+
+	// suppress unaligned access
+	u8 *pMaxPacketSize = (u8 *) &pDesc->wMaxPacketSize;
+	pThis->m_nMaxPacketSize = pMaxPacketSize[0] | (u16) pMaxPacketSize[1] << 8;
 	
 	if (pThis->m_Type == EndpointTypeInterrupt)
 	{
